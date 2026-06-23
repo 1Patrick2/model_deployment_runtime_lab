@@ -1,120 +1,91 @@
-# Project Paths Configuration
-# All paths in this file are relative to project root
-# Modify this file once, and all scripts will use these paths automatically
+# Model Deployment Runtime Lab - Path Configuration
+# All paths in this file are relative to project root.
+# Modify this file once, and all scripts will use these paths automatically.
 
 # ============================================================================
-# IMPORTANT: Set your project root path here
+# Set your project root path here, or leave null for auto-detect from CWD.
 # ============================================================================
-# Windows example: C:\Users\YourUsername\Documents\GitHub\yolo-vision-pipeline-rknn
-# Linux/WSL example: /home/username/path/to/yolo-vision-pipeline-rknn
-# Or leave as null to auto-detect from current working directory
-project_root: null # Auto-detect (set to absolute path if needed)
+project_root: null  # Auto-detect (set to absolute path if needed)
 
 # ============================================================================
-# Dataset Paths
-# ============================================================================
-dataset:
-  # Root dataset directory
-  root: datasets/yolo_dataset
-
-  # Training data
-  train_images: datasets/yolo_dataset/train/images
-  train_labels: datasets/yolo_dataset/train/labels
-
-  # Validation data
-  val_images: datasets/yolo_dataset/valid/images
-  val_labels: datasets/yolo_dataset/valid/labels
-
-  # Raw/source data
-  raw: datasets/raw
-
-  # Calibration images for RKNN quantization
-  calibration_images: datasets/calibration/images
-  calibration_list: datasets/calibration/dataset.txt
-
-# ============================================================================
-# Model Paths
-# ============================================================================
-models:
-  # Directory for all models
-  root: models
-
-  # Pretrained model (for download if not exists)
-  pretrained_model: models/yolov8l.pt
-
-  # Trained model output
-  best_pt: models/best.pt
-
-  # Exported ONNX model
-  best_onnx: models/best.onnx
-
-  # Final RKNN model
-  best_rknn: models/best.rknn
-
-  # Training results directory
-  training_results: models/training_results
-
-# ============================================================================
-# Configuration Paths
+# Configuration Files
 # ============================================================================
 configs:
   root: configs
-  data: configs/data.yaml
-  train: configs/train_config.yaml
-  export: configs/export_config.yaml
-  rknn: configs/rknn_config.yaml
-  paths: configs/paths.yaml # This file
+  paths: configs/paths.yaml
+  model: configs/model.yaml
+  export: configs/export.yaml
+  quant: configs/quant.yaml
+  prune: configs/prune.yaml
+  runtime: configs/runtime.yaml
+  zmq: configs/zmq.yaml
+  benchmark: configs/benchmark.yaml
+  rknn: configs/rknn.yaml
 
 # ============================================================================
-# Source Code Paths
+# Data and Samples
+# ============================================================================
+data:
+  root: data
+  samples: samples/images
+  calibration: samples/calibration
+  cifar_cache: data/cifar10
+
+# ============================================================================
+# Model Artifacts
+# ============================================================================
+models:
+  root: models
+  registry: models/registry.json
+  manifests: models/manifests
+
+# ============================================================================
+# Output Artifacts
+# ============================================================================
+artifacts:
+  root: outputs
+  baseline: outputs/baseline
+  onnx: outputs/onnx
+  quantized: outputs/quantized
+  pruned: outputs/pruned
+  rknn: outputs/rknn
+  runtime: outputs/runtime
+  reports: outputs/reports
+
+# ============================================================================
+# Source Code
 # ============================================================================
 src:
   root: src
-  train_script: src/train.py
-  dataset_tools: src/dataset_tools.py
-  export_pt2onnx: src/export/1_pt_to_onnx.py
-  export_onnx2rknn: src/export/2_onnx_to_rknn.py
-  utils: src/utils/dataset_utils.py
+  models: src/models
+  export: src/export
+  quantization: src/quantization
+  compression: src/compression
+  runtime: src/runtime
+  server: src/server
+  benchmark: src/benchmark
+  report: src/report
+  utils: src/utils
 
 # ============================================================================
-# Documentation Paths
+# Documentation
 # ============================================================================
 docs:
   root: docs
-  readme: README.md
-  quickstart: QUICKSTART.md
-  workflow: docs/workflow.md
-  quick_reference: docs/quick_reference.md
+  references: docs/references.md
+  path_configuration: docs/path_configuration.md
+  deployment_report: docs/deployment_report.md
 
 # ============================================================================
-# Third-party/External Paths
+# External / Third-party
 # ============================================================================
-# These point to external repositories that need to be cloned
-# Set these to the actual paths on your system
 external:
-  # Rockchip YOLOv8 (for ONNX export on Windows)
-  ultralytics_yolov8: 3rdparty/ultralytics_yolov8
-
-  # RKNN Toolkit2 (for RKNN conversion on Ubuntu/WSL)
-  rknn_toolkit2: 3rdparty/rknn-toolkit2
+  references: references
+  rknn_toolkit2: references/rknn-toolkit2
 
 # ============================================================================
-# Temporary/Cache Paths
+# Cache
 # ============================================================================
 cache:
-  # Temporary files during processing
-  temp: .cache
-
-  # Python cache
-  pycache: __pycache__
-
-  # Model cache
+  root: .cache
   model_cache: models/.cache
-
-# ============================================================================
-# Notes
-# ============================================================================
-# - All paths support both absolute and relative paths
-# - Relative paths are resolved from project_root
-# - Environment variables are NOT expanded (use null and auto-detect for flexibility)
-# - Forward slashes (/) work on all platforms, backslashes (\) only on Windows

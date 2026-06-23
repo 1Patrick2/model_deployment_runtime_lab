@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Path Manager for YOLO Vision Pipeline
-Centralizes all path configuration from configs/paths.yaml
+Path Manager for Model Deployment Runtime Lab.
+Centralizes all path configuration from configs/paths.yaml.
 """
 
 import os
