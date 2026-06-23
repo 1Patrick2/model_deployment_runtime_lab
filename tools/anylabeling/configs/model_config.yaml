@@ -1,0 +1,14 @@
+type: yolov8
+name: my_ball_model
+display_name: My Custom YOLO Model
+model_path: "../models/detection.onnx"
+stride: 32
+nc: 6
+classes:
+  # <--- 就是这里！必须用 classes，不能用 names
+  - yellow_ball
+  - blue_ball
+  - red_ball
+  - black_ball
+  - blue_placement_zone
+  - red_placement_zone
