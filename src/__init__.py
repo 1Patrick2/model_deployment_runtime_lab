@@ -1,7 +1,7 @@
-"""YOLO Vision Pipeline RKNN - Unified training and conversion pipeline."""
+"""Model Deployment Runtime Lab - model optimization, runtime backend, and deployment tools."""
 
 __version__ = "1.0.0"
-__author__ = "YOLO Vision Pipeline"
+__author__ = "Model Deployment Runtime Lab"
 
 from src.utils.dataset_utils import (
     calculate_iou,

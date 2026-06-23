@@ -43,7 +43,7 @@ function EnsureCondaEnv($name, $reqFile) {
     if ($exists) {
         Write-Host "  ✅ Conda environment '$name' already exists. Updating dependencies..." -ForegroundColor Yellow
         if ($reqFile -and (Test-Path $reqFile)) {
-            & conda run -n $name pip install -r $reqFile @opts 2>&1 | ForEach-Object { Write-Host "     $_" }
+            & conda run -n $name pip install -r $reqFile 2>&1 | ForEach-Object { Write-Host "     $_" }
             if ($LASTEXITCODE -ne 0) { Fail "pip install failed for $name in $reqFile" }
         }
         Write-Host "  ✅ $name up to date`n" -ForegroundColor Green

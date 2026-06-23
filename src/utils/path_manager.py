@@ -154,7 +154,7 @@ class PathManager:
         project_root = cls.get_project_root()
         
         print("=" * 70)
-        print("YOLO Vision Pipeline - Path Configuration")
+        print("Model Deployment Runtime Lab - Path Configuration")
         print("=" * 70)
         print(f"Project Root: {project_root}\n")
         
@@ -186,7 +186,7 @@ if __name__ == "__main__":
     
     # Examples
     print("\nExamples:")
-    print(f"  Best PT model: {paths.get('models.best_pt')}")
-    print(f"  Train images: {paths.get('dataset.train_images')}")
-    print(f"  ONNX export: {paths.get('models.best_onnx')}")
-    print(f"  RKNN output: {paths.get('models.best_rknn')}")
+    print(f"  ONNX artifacts: {paths.get('artifacts.onnx')}")
+    print(f"  Runtime outputs: {paths.get('artifacts.runtime')}")
+    print(f"  Reports: {paths.get('artifacts.reports')}")
+    print(f"  Model registry: {paths.get('models.registry')}")
