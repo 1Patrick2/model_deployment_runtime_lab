@@ -1,0 +1,8 @@
+numpy
+pyyaml
+pillow
+onnx
+onnxruntime
+pyzmq
+pydantic
+tqdm
