@@ -135,10 +135,10 @@ python -m src.server.zmq_client --input samples/images/danger_scene.jpg
 
 **Stage 2 — ONNX Runtime Backend (in progress).**
 
-- ✅ Stage 1: Fake runtime + ZMQ protocol, 24 tests
+- ✅ Stage 1: Fake runtime + ZMQ protocol with unit tests
 - ✅ Stage 2.1: Model manifest / registry with Pydantic schema
-- ⏳ Stage 2.2: ONNX export (MobileNetV3-small)
-- ⏳ Stage 2.3: ONNX Runtime runner
+- ✅ Stage 2.2: ONNX export script (MobileNetV3-small)
+- ✅ Stage 2.3: ONNX Runtime runner with dummy / image input
 - ⏳ Stage 2.4: ZMQ backend=onnx
 - ⏳ Stage 2.5: Latency benchmark
 

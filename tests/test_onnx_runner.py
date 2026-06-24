@@ -4,10 +4,7 @@ import json
 from pathlib import Path
 
 import pytest
-from pydantic import ValidationError
 
-from src.models.manifest import ModelManifest, load_manifest, resolve_artifact_path
-from src.models.registry import load_registry, resolve_manifest_path
 from src.runtime.onnx_runner import OnnxRunner
 from src.server.protocol import InferenceRequest
 
@@ -74,6 +71,15 @@ class TestOnnxRunnerInit:
         with pytest.raises(ValueError, match="expected 'onnx'"):
             runner.load()
 
+    def test_predict_before_load_raises_error(self, dummy_manifest_path):
+        runner = OnnxRunner(
+            manifest_path=dummy_manifest_path,
+            project_root=Path.cwd(),
+        )
+        req = InferenceRequest(backend="onnx", input_type="dummy", input="dummy")
+        with pytest.raises(RuntimeError, match="not loaded"):
+            runner.predict(req)
+
 
 # ── Optional smoke test (requires real ONNX artifact) ─────────────
 
@@ -128,3 +134,12 @@ class TestOnnxRunnerRealSmoke:
         assert resp.latency_ms.inference >= 0
         assert resp.latency_ms.postprocess >= 0
         assert resp.latency_ms.total > 0
+
+    def test_runner_rejects_backend_mismatch(self):
+        req = InferenceRequest(
+            backend="fake",
+            input_type="dummy",
+            input="dummy",
+        )
+        with pytest.raises(ValueError, match="does not match"):
+            self.runner.predict(req)

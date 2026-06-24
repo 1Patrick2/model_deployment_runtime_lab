@@ -13,11 +13,10 @@ Usage
 from __future__ import annotations
 
 import argparse
-import json
 import sys
 import time
 from pathlib import Path
-from typing import Any, List, Optional
+from typing import Any, Optional
 
 import numpy as np
 import onnxruntime
@@ -111,6 +110,16 @@ class OnnxRunner(BaseRunner):
 
     def predict(self, request: InferenceRequest) -> InferenceResponse:
         """Run inference and return a response."""
+        if self._session is None or self._manifest is None:
+            raise RuntimeError(
+                "OnnxRunner is not loaded. Call load() before predict()."
+            )
+        if request.backend != self.backend_name:
+            raise ValueError(
+                f"Request backend '{request.backend}' does not match "
+                f"runner backend '{self.backend_name}'"
+            )
+
         t0 = time.perf_counter()
         input_tensor = self._prepare_input(request)
         t_pre = time.perf_counter()
@@ -151,7 +160,8 @@ class OnnxRunner(BaseRunner):
     def _prepare_input(self, request: InferenceRequest) -> np.ndarray:
         """Produce the input tensor from the request."""
         if request.input_type == "dummy":
-            return np.random.randn(1, 3, 224, 224).astype(np.float32)
+            shape = tuple(self._manifest.input_shape)
+            return np.zeros(shape, dtype=np.float32)
 
         if request.input_type == "image_path":
             pre = self._manifest.preprocess
