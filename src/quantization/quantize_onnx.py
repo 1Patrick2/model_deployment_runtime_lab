@@ -102,35 +102,36 @@ def _run_static_qdq(inp: Path, out: Path, config: Dict[str, Any]) -> None:
     """Static QDQ quantisation with a dummy calibration reader."""
     model = onnx.load(str(inp))
     inferred = _relaxed_shape_infer(model)
-    # Save inferred model to a temp file so quantize_static can read it
+
     import tempfile
-    tmp = Path(tempfile.mktemp(suffix=".onnx"))
-    onnx.save(inferred, str(tmp))
 
-    # Read input metadata from the model
-    input_meta = inferred.graph.input[0]
-    shape = [
-        d.dim_value if d.dim_value > 0 else 1
-        for d in input_meta.type.tensor_type.shape.dim
-    ]
-    input_name = input_meta.name
-    cal_samples = int(config.get("calibration_samples", 8))
+    with tempfile.TemporaryDirectory() as tmpdir:
+        tmp = Path(tmpdir) / "inferred.onnx"
+        onnx.save(inferred, str(tmp))
 
-    reader = DummyCalibrationDataReader(
-        input_name=input_name,
-        input_shape=shape,
-        samples=cal_samples,
-    )
+        # Read input metadata from the model
+        input_meta = inferred.graph.input[0]
+        shape = [
+            d.dim_value if d.dim_value > 0 else 1
+            for d in input_meta.type.tensor_type.shape.dim
+        ]
+        input_name = input_meta.name
+        cal_samples = int(config.get("calibration_samples", 8))
 
-    quantize_static(
-        model_input=str(tmp),
-        model_output=str(out),
-        calibration_data_reader=reader,
-        quant_format=QuantFormat.QDQ,
-        activation_type=QuantType.QUInt8,
-        weight_type=QuantType.QInt8,
-    )
-    tmp.unlink(missing_ok=True)
+        reader = DummyCalibrationDataReader(
+            input_name=input_name,
+            input_shape=shape,
+            samples=cal_samples,
+        )
+
+        quantize_static(
+            model_input=str(tmp),
+            model_output=str(out),
+            calibration_data_reader=reader,
+            quant_format=QuantFormat.QDQ,
+            activation_type=QuantType.QUInt8,
+            weight_type=QuantType.QInt8,
+        )
 
 
 def run_quantization(

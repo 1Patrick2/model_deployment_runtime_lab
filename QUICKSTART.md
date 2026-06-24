@@ -169,6 +169,14 @@ python -m src.quantization.compare_reports `
 | 2.3 | ✅ ONNX Runtime backend |
 | 2.4 | ✅ ZMQ backend=onnx |
 | 2.5 | ✅ Latency benchmark |
-| 3 | **Current** — ONNX quantization |
+| 3 | ✅ ONNX quantization |
+| 4 | **Current** — RKNN conversion preparation |
+
+### Windows vs WSL Role
+
+| OS | Role | Responsibilities |
+|----|------|------------------|
+| Windows `mdrl-runtime` | Main runtime | ONNX Runtime, ZMQ, benchmark, quantization, report |
+| WSL `rknn-env` | RKNN conversion | ONNX → RKNN conversion via RKNN Toolkit2 |
 
 See [docs/zmq_protocol_design.md](docs/zmq_protocol_design.md) for protocol details.

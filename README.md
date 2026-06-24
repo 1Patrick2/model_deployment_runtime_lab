@@ -54,7 +54,8 @@ Model Zoo (MobileNetV3 / ResNet18)
 | 2.3 | ✅ Complete | ONNX Runtime runner |
 | 2.4 | ✅ Complete | ZMQ backend=onnx |
 | 2.5 | ✅ Complete | Latency benchmark |
-| 3 | **Current** | ONNX quantization |
+| 3 | ✅ Complete | ONNX QDQ quantization + FP32/INT8 comparison |
+| 4 | **Current** | RKNN conversion preparation |
 
 ## Stage 1 — Fake Runtime + ZMQ Protocol
 
@@ -134,15 +135,18 @@ python -m src.server.zmq_client --input samples/images/danger_scene.jpg
 
 ## Current Status
 
-**Stage 3 — ONNX Quantization (in progress).**
+**Stage 4 — RKNN conversion preparation (in progress).**
 
 - ✅ Stage 1: Fake runtime + ZMQ protocol with unit tests
 - ✅ Stage 2.1: Model manifest / registry with Pydantic schema
 - ✅ Stage 2.2: ONNX export script (MobileNetV3-small)
 - ✅ Stage 2.3: ONNX Runtime runner with dummy / image input
 - ✅ Stage 2.4: ZMQ backend=onnx (full client-server ONNX inference)
-- ✅ Stage 2.5: Latency benchmark (FP32 baseline: 9.92 MB, 1.30ms mean)
-- ⏳ Stage 3: ONNX dynamic quantization + FP32/INT8 comparison
+- ✅ Stage 2.5: Latency benchmark (FP32 baseline: 9.92 MB)
+- ✅ Stage 3: ONNX quantization + FP32/QDQ INT8 comparison
+  - Dynamic INT8: experimental — may fail on CPU due to ConvInteger
+  - QDQ INT8: recommended CPU-runnable path (~73% size reduction, comparable latency)
+- ⏳ Stage 4: RKNN conversion preparation
 
 ### Quick Commands
 
