@@ -1,0 +1,17 @@
+{
+  "model_id": "mobilenetv3_small",
+  "model_variant": "onnx_fp32_v1",
+  "backend": "onnx",
+  "task": "classification",
+  "artifact_path": "outputs/onnx/mobilenetv3_small.onnx",
+  "input_name": "input",
+  "output_name": "logits",
+  "input_shape": [1, 3, 224, 224],
+  "input_dtype": "float32",
+  "class_names_path": "models/labels/imagenet_classes.txt",
+  "preprocess": {
+    "resize": [224, 224],
+    "mean": [0.485, 0.456, 0.406],
+    "std": [0.229, 0.224, 0.225]
+  }
+}

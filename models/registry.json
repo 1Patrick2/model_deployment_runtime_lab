@@ -1,0 +1,7 @@
+[
+  {
+    "model_id": "mobilenetv3_small",
+    "backend": "onnx",
+    "manifest_path": "models/manifests/mobilenetv3_small_onnx_fp32.json"
+  }
+]
