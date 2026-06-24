@@ -94,6 +94,8 @@ Write-Host "Checking Conda Terms of Service if supported..."
 Write-Host "Conda ToS check completed or skipped."
 Write-Host ""
 
+$withTrain = $args -contains "--with-train"
+
 $runtimeReq = Join-Path $ScriptDir "requirements_win_runtime.txt"
 $devReq = Join-Path $ScriptDir "requirements_win_dev.txt"
 $trainReq = Join-Path $ScriptDir "requirements_win_train.txt"

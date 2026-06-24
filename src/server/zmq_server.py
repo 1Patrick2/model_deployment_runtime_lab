@@ -59,6 +59,19 @@ def handle_request_json(payload: dict, runner: BaseRunner) -> dict:
         )
         return err.model_dump()
 
+    # Validate that the requested backend matches the running runner.
+    if request.backend != runner.backend_name:
+        err = make_error_response(
+            request_id=request.request_id,
+            backend=request.backend,
+            error_type=UNSUPPORTED_BACKEND,
+            message=(
+                f"backend '{request.backend}' is not served by "
+                f"current runner '{runner.backend_name}'"
+            ),
+        )
+        return err.model_dump()
+
     try:
         response = runner.predict(request)
     except Exception as exc:

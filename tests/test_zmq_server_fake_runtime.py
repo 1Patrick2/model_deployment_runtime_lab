@@ -67,3 +67,15 @@ class TestHandleRequestJson:
         result = handle_request_json(payload, runner)
         assert result["latency_ms"] is not None
         assert result["latency_ms"]["total"] > 0
+
+    def test_backend_mismatch_returns_error(self, runner):
+        """Request with backend=onnx sent to a fake runner should be rejected."""
+        payload = {
+            "request_id": "bad-backend",
+            "backend": "onnx",
+            "input": "test.jpg",
+        }
+        result = handle_request_json(payload, runner)
+        assert result["status"] == "error"
+        assert result["error_type"] == UNSUPPORTED_BACKEND
+        assert result["request_id"] == "bad-backend"
