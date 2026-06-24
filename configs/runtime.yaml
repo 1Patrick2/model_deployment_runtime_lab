@@ -1,0 +1,13 @@
+# Runtime backend configuration
+# Used by zmq_server to resolve the default backend and its metadata.
+
+default_backend: fake
+
+backends:
+  fake:
+    model_id: fake_classifier
+    model_variant: fake_v1
+    class_names:
+      0: safe
+      1: warning
+      2: danger

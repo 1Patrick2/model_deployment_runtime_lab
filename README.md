@@ -47,9 +47,65 @@ Model Zoo (MobileNetV3 / ResNet18)
 | Stage | Status | What |
 |-------|--------|------|
 | 0 | ✅ Complete | Initialize project from deployment pipeline skeleton |
-| 0.5 | **Current** | Environment foundation, path config, docs reframe |
-| 1 | ⏳ Planned | Fake runtime + ZMQ protocol |
+| 0.5 | ✅ Complete | Environment foundation, path config, docs reframe |
+| 1 | **Current** | Fake runtime + ZMQ protocol |
 | 2+ | 📋 Planned | ONNX export, runtime backend, quantization, benchmark, deployment report |
+
+## Stage 1 — Fake Runtime + ZMQ Protocol
+
+A minimal inference serving skeleton has been built:
+
+```
+client → JSON (InferenceRequest) → ZMQ REQ/REP → fake runner → JSON (InferenceResponse)
+```
+
+### Server
+
+```powershell
+conda activate mdrl-runtime
+python -m src.server.zmq_server --backend fake --host 127.0.0.1 --port 5555
+```
+
+### Client (separate terminal)
+
+```powershell
+conda activate mdrl-runtime
+python -m src.server.zmq_client --input samples/images/danger_scene.jpg --backend fake
+```
+
+Expected output:
+
+```json
+{
+  "request_id": "67a1b2c3",
+  "schema_version": "inference_response.v1",
+  "status": "ok",
+  "prediction": {
+    "class_id": 2,
+    "class_name": "danger",
+    "confidence": 0.99
+  },
+  "latency_ms": {
+    "preprocess": 1.0,
+    "inference": 2.0,
+    "postprocess": 1.0,
+    "total": 4.0
+  },
+  "backend": "fake",
+  "model_id": "fake_classifier",
+  "model_variant": "fake_v1"
+}
+```
+
+Input heuristics:
+
+| Input contains | Prediction |
+|----------------|------------|
+| `"danger"` | danger (class_id=2, confidence 0.99) |
+| `"safe"` | safe (class_id=0, confidence 0.95) |
+| anything else | warning (class_id=1, confidence 0.87) |
+
+See [docs/zmq_protocol_design.md](docs/zmq_protocol_design.md) for the full protocol specification.
 
 ## Quick Reference
 
@@ -61,18 +117,27 @@ conda activate mdrl-runtime
 # Verify
 python verify_paths.py
 
-# Future — fake runtime smoke
+# Run tests
+python -m pytest tests -q
+
+# Start fake inference server (Terminal 1)
 python -m src.server.zmq_server --backend fake
+
+# Send a request (Terminal 2)
+python -m src.server.zmq_client --input samples/images/danger_scene.jpg
 ```
 
 ## Current Status
 
-**Stage 0.5 — Environment Foundation** complete.
+**Stage 1 — Fake Runtime + ZMQ Protocol** complete.
 
-- ✅ Project docs reframed for deployment runtime lab
-- ✅ Requirements split (runtime / dev / train / wsl-rknn)
-- ✅ Windows and WSL setup scripts reworked
-- ✅ Path config and verification generalized
+- ✅ Inference request/response protocol (Pydantic models)
+- ✅ Runtime backend interface (`BaseRunner`) + `FakeRunner` implementation
+- ✅ ZMQ REQ/REP server with `--backend`, `--host`, `--port` options
+- ✅ ZMQ client with `--input`, `--backend`, `--timeout-ms` options
+- ✅ Error handling: `INVALID_REQUEST`, `UNSUPPORTED_BACKEND`, `RUNTIME_ERROR`
+- ✅ `handle_request_json` extracted as testable server core
+- ✅ 23 unit tests covering protocol, fake runner, and server handler
 
 ## Hard Boundaries (First Version)
 

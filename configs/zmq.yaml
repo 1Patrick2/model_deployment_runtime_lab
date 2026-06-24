@@ -1,0 +1,9 @@
+# ZMQ server and client configuration
+
+server:
+  host: 127.0.0.1
+  port: 5555
+  timeout_ms: 3000
+
+client:
+  timeout_ms: 3000
