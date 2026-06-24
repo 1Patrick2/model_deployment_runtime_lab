@@ -10,7 +10,6 @@ Usage
 from __future__ import annotations
 
 import argparse
-import os
 import sys
 import time
 from pathlib import Path
@@ -19,15 +18,20 @@ import yaml
 
 from src.runtime.onnx_runner import OnnxRunner
 from src.server.protocol import InferenceRequest
+from src.benchmark.artifact import compute_onnx_artifact_size_mb
 from src.benchmark.report import (
     build_benchmark_report,
     write_json_report,
     write_markdown_report,
 )
+from src.models.manifest import resolve_artifact_path
 
 
 def run_benchmark(config: dict) -> dict:
     """Run one benchmark round and return the report dict."""
+    if config.get("backend") != "onnx":
+        raise ValueError("Stage 2.5 benchmark currently supports only backend=onnx")
+
     manifest_path = config["manifest"]
     input_type = config.get("input_type", "dummy")
     input_value = config.get("input", "dummy")
@@ -63,21 +67,17 @@ def run_benchmark(config: dict) -> dict:
                 "total": resp.latency_ms.total,
             })
 
-    # Capture manifest fields before closing
-    model_id = runner._manifest.model_id if runner._manifest else ""
-    model_variant = runner._manifest.model_variant if runner._manifest else ""
-    artifact_path = runner._manifest.artifact_path if runner._manifest else ""
+    # Capture fields via public manifest property before closing
+    manifest = runner.manifest
+    model_id = manifest.model_id
+    model_variant = manifest.model_variant
+    artifact_path = manifest.artifact_path
+
+    # Resolve and measure full artifact size (including external data)
+    resolved = resolve_artifact_path(Path.cwd(), manifest)
+    artifact_size_mb = compute_onnx_artifact_size_mb(resolved)
 
     runner.close()
-
-    # Artifact size
-    artifact_size_mb = 0.0
-    if artifact_path:
-        ap = Path(artifact_path)
-        if ap.exists():
-            artifact_size_mb = os.path.getsize(ap) / (1024 * 1024)
-        elif (Path.cwd() / ap).exists():
-            artifact_size_mb = os.path.getsize(Path.cwd() / ap) / (1024 * 1024)
 
     return build_benchmark_report(
         model_id=model_id,
@@ -120,8 +120,12 @@ def main() -> None:
     elapsed = time.perf_counter() - t0
 
     # Write outputs
-    json_path = write_json_report(report, config.get("output_json", "outputs/reports/benchmark.json"))
-    md_path = write_markdown_report(report, config.get("output_md", "outputs/reports/benchmark.md"))
+    json_path = write_json_report(
+        report, config.get("output_json", "outputs/reports/benchmark.json")
+    )
+    md_path = write_markdown_report(
+        report, config.get("output_md", "outputs/reports/benchmark.md")
+    )
 
     print(f"Done  ({elapsed:.1f}s)")
     print(f"  JSON: {json_path}")
@@ -130,6 +134,8 @@ def main() -> None:
     # Summary
     t = report["latency_ms"]["total"]
     print(f"  total latency: mean={t['mean']}ms  p50={t['p50']}ms  p95={t['p95']}ms")
+    m = report["model"]
+    print(f"  artifact size: {m['artifact_size_mb']} MB")
 
 
 if __name__ == "__main__":

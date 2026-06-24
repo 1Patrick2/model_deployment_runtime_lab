@@ -155,6 +155,15 @@ class OnnxRunner(BaseRunner):
         self._session = None
         self._manifest = None
 
+    @property
+    def manifest(self):
+        """Loaded model manifest (read-only after ``load()``)."""
+        if self._manifest is None:
+            raise RuntimeError(
+                "OnnxRunner is not loaded. Call load() before accessing manifest."
+            )
+        return self._manifest
+
     # ── Internal helpers ──────────────────────────────────────────
 
     def _prepare_input(self, request: InferenceRequest) -> np.ndarray:
