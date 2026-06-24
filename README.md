@@ -147,21 +147,24 @@ python -m src.server.zmq_client --input samples/images/danger_scene.jpg
 ### Quick Commands
 
 ```powershell
-# ONNX dynamic quantization
+# ONNX quantization (recommended: static QDQ with dummy calibration)
+python -m src.quantization.quantize_onnx --config configs/quant_static_qdq_dummy.yaml
+
+# ONNX quantization (experimental: dynamic — may fail on CPU due to ConvInteger)
 python -m src.quantization.quantize_onnx --config configs/quant_dynamic.yaml
 
 # FP32 benchmark
 python -m src.benchmark.latency --config configs/benchmark.yaml
 
-# INT8 benchmark
-python -m src.benchmark.latency --config configs/benchmark_int8_dynamic.yaml
+# QDQ INT8 benchmark
+python -m src.benchmark.latency --config configs/benchmark_int8_qdq_dummy.yaml
 
-# FP32 vs INT8 comparison
-python -m src.quantization.compare_reports ^
-    --baseline outputs/reports/benchmark_mobilenetv3_small_onnx_fp32.json ^
-    --candidate outputs/reports/benchmark_mobilenetv3_small_onnx_int8_dynamic.json ^
-    --output-json outputs/reports/compare_mobilenetv3_small_fp32_vs_int8_dynamic.json ^
-    --output-md outputs/reports/compare_mobilenetv3_small_fp32_vs_int8_dynamic.md
+# FP32 vs QDQ INT8 comparison
+python -m src.quantization.compare_reports `
+    --baseline outputs/reports/benchmark_mobilenetv3_small_onnx_fp32.json `
+    --candidate outputs/reports/benchmark_mobilenetv3_small_onnx_int8_qdq_dummy.json `
+    --output-json outputs/reports/compare_mobilenetv3_small_fp32_vs_int8_qdq_dummy.json `
+    --output-md outputs/reports/compare_mobilenetv3_small_fp32_vs_int8_qdq_dummy.md
 ```
 
 ## Hard Boundaries (First Version)

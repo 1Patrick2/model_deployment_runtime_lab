@@ -137,21 +137,24 @@ Expected response:
 ```powershell
 conda activate mdrl-runtime
 
-# Dynamic quantization (FP32 → INT8)
+# Recommended: static QDQ quantization with dummy calibration
+python -m src.quantization.quantize_onnx --config configs/quant_static_qdq_dummy.yaml
+
+# Experimental: dynamic quantization (may fail on CPU due to ConvInteger)
 python -m src.quantization.quantize_onnx --config configs/quant_dynamic.yaml
 
 # FP32 benchmark
 python -m src.benchmark.latency --config configs/benchmark.yaml
 
-# INT8 benchmark
-python -m src.benchmark.latency --config configs/benchmark_int8_dynamic.yaml
+# QDQ INT8 benchmark
+python -m src.benchmark.latency --config configs/benchmark_int8_qdq_dummy.yaml
 
 # Comparison report
-python -m src.quantization.compare_reports ^
-    --baseline outputs/reports/benchmark_mobilenetv3_small_onnx_fp32.json ^
-    --candidate outputs/reports/benchmark_mobilenetv3_small_onnx_int8_dynamic.json ^
-    --output-json outputs/reports/compare_mobilenetv3_small_fp32_vs_int8_dynamic.json ^
-    --output-md outputs/reports/compare_mobilenetv3_small_fp32_vs_int8_dynamic.md
+python -m src.quantization.compare_reports `
+    --baseline outputs/reports/benchmark_mobilenetv3_small_onnx_fp32.json `
+    --candidate outputs/reports/benchmark_mobilenetv3_small_onnx_int8_qdq_dummy.json `
+    --output-json outputs/reports/compare_mobilenetv3_small_fp32_vs_int8_qdq_dummy.json `
+    --output-md outputs/reports/compare_mobilenetv3_small_fp32_vs_int8_qdq_dummy.md
 ```
 
 ## Project Status

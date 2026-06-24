@@ -31,3 +31,18 @@ class TestQuantizeOnnx:
         assert out.exists()
         model = onnx.load(str(out))
         onnx.checker.check_model(model)
+
+    @pytest.mark.skipif(
+        not Path("outputs/onnx/mobilenetv3_small.onnx").exists(),
+        reason="ONNX artifact not generated; run export_onnx.py first",
+    )
+    def test_static_qdq_generates_runnable_model(self, tmp_path):
+        out = tmp_path / "qdq.onnx"
+        run_quantization(
+            input_path="outputs/onnx/mobilenetv3_small.onnx",
+            output_path=str(out),
+            config={"method": "static_qdq", "calibration_samples": 2},
+        )
+        assert out.exists()
+        model = onnx.load(str(out))
+        onnx.checker.check_model(model)

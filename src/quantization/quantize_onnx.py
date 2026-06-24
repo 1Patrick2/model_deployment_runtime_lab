@@ -1,11 +1,14 @@
-"""ONNX dynamic quantization script.
+"""ONNX quantization script — dynamic and static QDQ (dummy calibration).
 
 Usage
 -----
 .. code-block:: powershell
 
+    # Dynamic quantization (experimental: ConvInteger may fail on CPU)
     python -m src.quantization.quantize_onnx --config configs/quant_dynamic.yaml
-    python -m src.quantization.quantize_onnx --input outputs/onnx/mobilenetv3_small.onnx --output outputs/onnx/mobilenetv3_small_int8_dynamic.onnx
+
+    # Static QDQ quantization with dummy calibration (recommended)
+    python -m src.quantization.quantize_onnx --config configs/quant_static_qdq_dummy.yaml
 """
 
 from __future__ import annotations
@@ -13,36 +16,136 @@ from __future__ import annotations
 import argparse
 import sys
 from pathlib import Path
+from typing import Any, Dict, Optional
 
+import numpy as np
 import onnx
 import yaml
-from onnxruntime.quantization import quantize_dynamic, QuantType
+from onnxruntime.quantization import (
+    CalibrationDataReader,
+    QuantFormat,
+    QuantType,
+    quantize_dynamic,
+    quantize_static,
+)
 
 
-def _preprocess_for_quantization(input_path: Path) -> Path:
-    """Run shape inference with relaxed options.
+# ── Dummy calibration data reader ────────────────────────────────
 
-    The ONNX Runtime ``quantize_dynamic`` internally calls
-    ``infer_shapes_path`` with default (strict) options, which can
-    fail on models exported via newer PyTorch dynamo exporters.
-    Preprocessing with ``strict_mode=False, check_type=False`` avoids
-    this.
+
+class DummyCalibrationDataReader(CalibrationDataReader):
+    """Yields zero-valued tensors for static QDQ calibration.
+
+    Using dummy data means the calibration only serves to *make the
+    pipeline runnable* — it does **not** produce accuracy-aware
+    quantization scales.
     """
-    model = onnx.load(str(input_path), load_external_data=True)
-    inferred = onnx.shape_inference.infer_shapes(
+
+    def __init__(
+        self,
+        input_name: str,
+        input_shape: list[int],
+        samples: int = 8,
+    ) -> None:
+        self.input_name = input_name
+        self.input_shape = input_shape
+        self.samples = samples
+        self._count = 0
+
+    def get_next(self) -> Optional[Dict[str, np.ndarray]]:
+        if self._count >= self.samples:
+            return None
+        self._count += 1
+        return {self.input_name: np.zeros(self.input_shape, dtype=np.float32)}
+
+
+# ── Shape-inference helper ──────────────────────────────────────
+
+
+def _relaxed_shape_infer(model: onnx.ModelProto) -> onnx.ModelProto:
+    """Re-run shape inference with relaxed settings.
+
+    Models exported via newer PyTorch dynamo backends sometimes embed
+    conflicting shape info.  Clearing that info and re-inferring with
+    ``strict_mode=False`` avoids spurious failures.
+    """
+    for node in model.graph.node:
+        for attr in node.attribute:
+            if attr.type == onnx.AttributeProto.GRAPH:
+                _clear_value_info(attr.g)
+    _clear_value_info(model.graph)
+    return onnx.shape_inference.infer_shapes(
         model, strict_mode=False, check_type=False
     )
+
+
+def _clear_value_info(graph) -> None:
+    while graph.value_info:
+        graph.value_info.pop()
+
+
+# ── Quantisation runners ────────────────────────────────────────
+
+
+def _run_dynamic(inp: Path, out: Path) -> None:
+    """Dynamic quantization (may produce unsupported ConvInteger ops)."""
+    model = onnx.load(str(inp))
+    inferred = _relaxed_shape_infer(model)
+    quantize_dynamic(
+        model_input=inferred,
+        model_output=str(out),
+        weight_type=QuantType.QInt8,
+    )
+
+
+def _run_static_qdq(inp: Path, out: Path, config: Dict[str, Any]) -> None:
+    """Static QDQ quantisation with a dummy calibration reader."""
+    model = onnx.load(str(inp))
+    inferred = _relaxed_shape_infer(model)
+    # Save inferred model to a temp file so quantize_static can read it
+    import tempfile
     tmp = Path(tempfile.mktemp(suffix=".onnx"))
     onnx.save(inferred, str(tmp))
-    return tmp
+
+    # Read input metadata from the model
+    input_meta = inferred.graph.input[0]
+    shape = [
+        d.dim_value if d.dim_value > 0 else 1
+        for d in input_meta.type.tensor_type.shape.dim
+    ]
+    input_name = input_meta.name
+    cal_samples = int(config.get("calibration_samples", 8))
+
+    reader = DummyCalibrationDataReader(
+        input_name=input_name,
+        input_shape=shape,
+        samples=cal_samples,
+    )
+
+    quantize_static(
+        model_input=str(tmp),
+        model_output=str(out),
+        calibration_data_reader=reader,
+        quant_format=QuantFormat.QDQ,
+        activation_type=QuantType.QUInt8,
+        weight_type=QuantType.QInt8,
+    )
+    tmp.unlink(missing_ok=True)
 
 
-def run_quantization(input_path: str | Path, output_path: str | Path) -> Path:
-    """Run ONNX dynamic quantization.
+def run_quantization(
+    input_path: str | Path,
+    output_path: str | Path,
+    config: Optional[Dict[str, Any]] = None,
+) -> Path:
+    """Run ONNX quantisation (dynamic or static QDQ).
 
     Raises ``FileNotFoundError`` if the input model does not exist.
     Returns the resolved output path.
     """
+    if config is None:
+        config = {}
+
     inp = Path(input_path)
     if not inp.exists():
         raise FileNotFoundError(f"Input ONNX model not found: {inp.resolve()}")
@@ -50,71 +153,61 @@ def run_quantization(input_path: str | Path, output_path: str | Path) -> Path:
     out = Path(output_path)
     out.parent.mkdir(parents=True, exist_ok=True)
 
-    print(f"Quantizing (dynamic, QInt8) ...")
+    method = config.get("method", "dynamic")
+    print(f"Quantizing (method={method}) ...")
     print(f"  input:  {inp.resolve()}")
     print(f"  output: {out.resolve()}")
 
-    # Load model, strip conflicting shapes, then quantize
-    model = onnx.load(str(inp))
-    # Remove any pre-existing inferred shape info that may conflict
-    for node in model.graph.node:
-        for attr in node.attribute:
-            if attr.type == onnx.AttributeProto.GRAPH:
-                _clear_value_info(attr.g)
-    _clear_value_info(model.graph)
-
-    # Re-infer shapes with relaxed settings for quantization compatibility
-    inferred = onnx.shape_inference.infer_shapes(
-        model, strict_mode=False, check_type=False
-    )
-
-    quantize_dynamic(
-        model_input=inferred,
-        model_output=str(out),
-        weight_type=QuantType.QInt8,
-    )
+    if method == "static_qdq":
+        _run_static_qdq(inp, out, config)
+    else:
+        _run_dynamic(inp, out)
 
     size_mb = out.stat().st_size / (1024 * 1024)
     print(f"Done.  Artifact size: {size_mb:.2f} MB")
     return out
 
 
-def _clear_value_info(graph) -> None:
-    """Remove existing value_info entries that may contain conflicting shape info."""
-    while graph.value_info:
-        graph.value_info.pop()
+# ── CLI entrypoint ──────────────────────────────────────────────
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="ONNX dynamic quantization")
+    parser = argparse.ArgumentParser(description="ONNX quantisation")
     parser.add_argument(
         "--config",
         default="configs/quant_dynamic.yaml",
-        help="Path to quantization YAML config",
+        help="Path to quantisation YAML config",
     )
     parser.add_argument("--input", help="Input ONNX model path (overrides config)")
     parser.add_argument("--output", help="Output ONNX path (overrides config)")
+    parser.add_argument(
+        "--method",
+        choices=["dynamic", "static_qdq"],
+        help="Quantisation method (overrides config)",
+    )
     args = parser.parse_args()
 
-    # Load config
     config_path = Path(args.config)
-    config = {}
+    config: Dict[str, Any] = {}
     if config_path.exists():
         with open(config_path, "r", encoding="utf-8") as f:
             config = yaml.safe_load(f) or {}
+
+    if args.method:
+        config["method"] = args.method
 
     input_model = args.input or config.get("input_model")
     output_model = args.output or config.get("output_model")
 
     if not input_model:
-        print("ERROR: input_model is required (set in config or via --input)", file=sys.stderr)
+        print("ERROR: input_model is required", file=sys.stderr)
         sys.exit(1)
     if not output_model:
-        print("ERROR: output_model is required (set in config or via --output)", file=sys.stderr)
+        print("ERROR: output_model is required", file=sys.stderr)
         sys.exit(1)
 
     try:
-        run_quantization(input_model, output_model)
+        run_quantization(input_model, output_model, config=config)
     except FileNotFoundError as exc:
         print(f"ERROR: {exc}", file=sys.stderr)
         sys.exit(1)
