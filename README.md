@@ -51,9 +51,9 @@ Model Zoo (MobileNetV3 / ResNet18)
 | 1 | ✅ Complete | Fake runtime + ZMQ protocol |
 | 2.1 | ✅ Complete | Model manifest / registry |
 | 2.2 | ✅ Complete | ONNX export (MobileNetV3-small) |
-| 2.3 | **Current** | ONNX Runtime runner |
-| 2.4 | ⏳ Planned | ZMQ backend=onnx |
-| 2.5 | ⏳ Planned | Latency benchmark |
+| 2.3 | ✅ Complete | ONNX Runtime runner |
+| 2.4 | ✅ Complete | ZMQ backend=onnx |
+| 2.5 | **Current** | Latency benchmark |
 
 ## Stage 1 — Fake Runtime + ZMQ Protocol
 
@@ -133,14 +133,26 @@ python -m src.server.zmq_client --input samples/images/danger_scene.jpg
 
 ## Current Status
 
-**Stage 2 — ONNX Runtime Backend (in progress).**
+**Stage 2 — ONNX Runtime Backend (benchmark phase).**
 
 - ✅ Stage 1: Fake runtime + ZMQ protocol with unit tests
 - ✅ Stage 2.1: Model manifest / registry with Pydantic schema
 - ✅ Stage 2.2: ONNX export script (MobileNetV3-small)
 - ✅ Stage 2.3: ONNX Runtime runner with dummy / image input
-- ⏳ Stage 2.4: ZMQ backend=onnx
-- ⏳ Stage 2.5: Latency benchmark
+- ✅ Stage 2.4: ZMQ backend=onnx (full client-server ONNX inference)
+- ⏳ Stage 2.5: Latency benchmark (in progress)
+
+### ONNX ZMQ Smoke Test
+
+```powershell
+# Terminal 1 — start the ONNX inference server
+conda activate mdrl-runtime
+python -m src.server.zmq_server --backend onnx --manifest models/manifests/mobilenetv3_small_onnx_fp32.json
+
+# Terminal 2 — send a request
+conda activate mdrl-runtime
+python -m src.server.zmq_client --backend onnx --input-type dummy --input dummy
+```
 
 ## Hard Boundaries (First Version)
 

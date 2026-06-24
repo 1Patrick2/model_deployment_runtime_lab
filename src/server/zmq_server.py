@@ -126,7 +126,18 @@ def main() -> None:
 
     context = zmq.Context()
     socket = context.socket(zmq.REP)
-    socket.bind(address)
+
+    try:
+        socket.bind(address)
+    except zmq.ZMQError as exc:
+        print(f"ERROR: failed to bind {address}", file=sys.stderr)
+        print(f"  {exc}", file=sys.stderr)
+        print("  Hint: another server may already be using this port.", file=sys.stderr)
+        print("  Use a different --port or stop the existing process.", file=sys.stderr)
+        runner.close()
+        socket.close()
+        context.term()
+        sys.exit(1)
 
     print(f"ZMQ server listening on {address}  (backend={args.backend})")
     print("Press Ctrl+C to stop.")

@@ -79,6 +79,7 @@ def main() -> None:
         reply = socket.recv_json()
     except zmq.error.Again:
         print(f"ERROR: timeout after {args.timeout_ms} ms — server did not reply")
+        print("  Hint: check whether the server is running on the same --host/--port.")
         sys.exit(1)
     except Exception as exc:
         print(f"ERROR: {exc}")

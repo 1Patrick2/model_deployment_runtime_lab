@@ -109,6 +109,29 @@ Exporting to outputs/onnx/mobilenetv3_small.onnx  (opset=17) ...
 Done.  Artifact size: ~9.8 MB
 ```
 
+## Step 6: Run ONNX Inference via ZMQ
+
+```powershell
+# Terminal 1 — start server
+conda activate mdrl-runtime
+python -m src.server.zmq_server --backend onnx --manifest models/manifests/mobilenetv3_small_onnx_fp32.json
+
+# Terminal 2 — send request
+conda activate mdrl-runtime
+python -m src.server.zmq_client --backend onnx --input-type dummy --input dummy
+```
+
+Expected response:
+```json
+{
+  "status": "ok",
+  "backend": "onnx",
+  "model_id": "mobilenetv3_small",
+  "prediction": {"class_id": 0, "class_name": "class_0", "confidence": 0.001},
+  "latency_ms": {"preprocess": 0.13, "inference": 2.54, "total": 2.8}
+}
+```
+
 ## Project Status
 
 | Stage | Status |
@@ -118,8 +141,8 @@ Done.  Artifact size: ~9.8 MB
 | 1 | ✅ Fake runtime + ZMQ protocol |
 | 2.1 | ✅ Model manifest / registry |
 | 2.2 | ✅ ONNX export (MobileNetV3) |
-| 2.3 | ⏳ ONNX Runtime backend |
-| 2.4 | ⏳ ZMQ backend=onnx |
-| 2.5 | ⏳ Latency benchmark |
+| 2.3 | ✅ ONNX Runtime backend |
+| 2.4 | ✅ ZMQ backend=onnx |
+| 2.5 | **Current** — Latency benchmark |
 
 See [docs/zmq_protocol_design.md](docs/zmq_protocol_design.md) for protocol details.
