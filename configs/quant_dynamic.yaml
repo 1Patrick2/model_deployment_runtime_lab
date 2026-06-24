@@ -1,0 +1,6 @@
+# Dynamic quantization configuration
+
+input_model: outputs/onnx/mobilenetv3_small.onnx
+output_model: outputs/onnx/mobilenetv3_small_int8_dynamic.onnx
+method: dynamic
+weight_type: qint8

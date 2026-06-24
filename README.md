@@ -53,7 +53,8 @@ Model Zoo (MobileNetV3 / ResNet18)
 | 2.2 | ✅ Complete | ONNX export (MobileNetV3-small) |
 | 2.3 | ✅ Complete | ONNX Runtime runner |
 | 2.4 | ✅ Complete | ZMQ backend=onnx |
-| 2.5 | **Current** | Latency benchmark |
+| 2.5 | ✅ Complete | Latency benchmark |
+| 3 | **Current** | ONNX quantization |
 
 ## Stage 1 — Fake Runtime + ZMQ Protocol
 
@@ -133,25 +134,34 @@ python -m src.server.zmq_client --input samples/images/danger_scene.jpg
 
 ## Current Status
 
-**Stage 2 — ONNX Runtime Backend (benchmark phase).**
+**Stage 3 — ONNX Quantization (in progress).**
 
 - ✅ Stage 1: Fake runtime + ZMQ protocol with unit tests
 - ✅ Stage 2.1: Model manifest / registry with Pydantic schema
 - ✅ Stage 2.2: ONNX export script (MobileNetV3-small)
 - ✅ Stage 2.3: ONNX Runtime runner with dummy / image input
 - ✅ Stage 2.4: ZMQ backend=onnx (full client-server ONNX inference)
-- ⏳ Stage 2.5: Latency benchmark (in progress)
+- ✅ Stage 2.5: Latency benchmark (FP32 baseline: 9.92 MB, 1.30ms mean)
+- ⏳ Stage 3: ONNX dynamic quantization + FP32/INT8 comparison
 
-### ONNX ZMQ Smoke Test
+### Quick Commands
 
 ```powershell
-# Terminal 1 — start the ONNX inference server
-conda activate mdrl-runtime
-python -m src.server.zmq_server --backend onnx --manifest models/manifests/mobilenetv3_small_onnx_fp32.json
+# ONNX dynamic quantization
+python -m src.quantization.quantize_onnx --config configs/quant_dynamic.yaml
 
-# Terminal 2 — send a request
-conda activate mdrl-runtime
-python -m src.server.zmq_client --backend onnx --input-type dummy --input dummy
+# FP32 benchmark
+python -m src.benchmark.latency --config configs/benchmark.yaml
+
+# INT8 benchmark
+python -m src.benchmark.latency --config configs/benchmark_int8_dynamic.yaml
+
+# FP32 vs INT8 comparison
+python -m src.quantization.compare_reports ^
+    --baseline outputs/reports/benchmark_mobilenetv3_small_onnx_fp32.json ^
+    --candidate outputs/reports/benchmark_mobilenetv3_small_onnx_int8_dynamic.json ^
+    --output-json outputs/reports/compare_mobilenetv3_small_fp32_vs_int8_dynamic.json ^
+    --output-md outputs/reports/compare_mobilenetv3_small_fp32_vs_int8_dynamic.md
 ```
 
 ## Hard Boundaries (First Version)

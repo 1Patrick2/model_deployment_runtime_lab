@@ -132,6 +132,28 @@ Expected response:
 }
 ```
 
+## Step 7: Quantization and Benchmark Comparison (Optional)
+
+```powershell
+conda activate mdrl-runtime
+
+# Dynamic quantization (FP32 → INT8)
+python -m src.quantization.quantize_onnx --config configs/quant_dynamic.yaml
+
+# FP32 benchmark
+python -m src.benchmark.latency --config configs/benchmark.yaml
+
+# INT8 benchmark
+python -m src.benchmark.latency --config configs/benchmark_int8_dynamic.yaml
+
+# Comparison report
+python -m src.quantization.compare_reports ^
+    --baseline outputs/reports/benchmark_mobilenetv3_small_onnx_fp32.json ^
+    --candidate outputs/reports/benchmark_mobilenetv3_small_onnx_int8_dynamic.json ^
+    --output-json outputs/reports/compare_mobilenetv3_small_fp32_vs_int8_dynamic.json ^
+    --output-md outputs/reports/compare_mobilenetv3_small_fp32_vs_int8_dynamic.md
+```
+
 ## Project Status
 
 | Stage | Status |
@@ -143,6 +165,7 @@ Expected response:
 | 2.2 | ✅ ONNX export (MobileNetV3) |
 | 2.3 | ✅ ONNX Runtime backend |
 | 2.4 | ✅ ZMQ backend=onnx |
-| 2.5 | **Current** — Latency benchmark |
+| 2.5 | ✅ Latency benchmark |
+| 3 | **Current** — ONNX quantization |
 
 See [docs/zmq_protocol_design.md](docs/zmq_protocol_design.md) for protocol details.
