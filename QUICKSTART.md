@@ -86,13 +86,37 @@ bash setup_wsl.sh
 source ~/mdrl-rknn-workdir/rknn-env/bin/activate
 ```
 
+## Step 5: Export ONNX Model (Optional, requires mdrl-train)
+
+```powershell
+.\setup_win.ps1 --with-train
+conda activate mdrl-train
+
+# Install torch & torchvision (CPU version)
+pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
+
+# Export MobileNetV3-small to ONNX
+python -m src.export.export_onnx --model mobilenet_v3_small --pretrained
+```
+
+Expected output:
+```
+Loading mobilenet_v3_small (pretrained=True) ...
+Exporting to outputs/onnx/mobilenetv3_small.onnx  (opset=17) ...
+Done.  Artifact size: ~9.8 MB
+```
+
 ## Project Status
 
 | Stage | Status |
 |-------|--------|
 | 0 | ✅ Initialize project |
 | 0.5 | ✅ Environment foundation |
-| 1 | ✅ **Fake runtime + ZMQ protocol** |
-| 2 | 📋 ONNX Runtime backend |
+| 1 | ✅ Fake runtime + ZMQ protocol |
+| 2.1 | ✅ Model manifest / registry |
+| 2.2 | ✅ ONNX export (MobileNetV3) |
+| 2.3 | ⏳ ONNX Runtime backend |
+| 2.4 | ⏳ ZMQ backend=onnx |
+| 2.5 | ⏳ Latency benchmark |
 
 See [docs/zmq_protocol_design.md](docs/zmq_protocol_design.md) for protocol details.

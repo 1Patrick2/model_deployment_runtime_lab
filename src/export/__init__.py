@@ -1,3 +1,1 @@
-"""Export module for model conversion."""
-
-__all__ = ["pt_to_onnx", "onnx_to_rknn"]
+"""Export module — model conversion from PyTorch / framework to ONNX / RKNN."""

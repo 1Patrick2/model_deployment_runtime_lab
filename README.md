@@ -49,7 +49,11 @@ Model Zoo (MobileNetV3 / ResNet18)
 | 0 | ✅ Complete | Initialize project from deployment pipeline skeleton |
 | 0.5 | ✅ Complete | Environment foundation, path config, docs reframe |
 | 1 | ✅ Complete | Fake runtime + ZMQ protocol |
-| 2 | **Current** | ONNX Runtime backend
+| 2.1 | ✅ Complete | Model manifest / registry |
+| 2.2 | ✅ Complete | ONNX export (MobileNetV3-small) |
+| 2.3 | **Current** | ONNX Runtime runner |
+| 2.4 | ⏳ Planned | ZMQ backend=onnx |
+| 2.5 | ⏳ Planned | Latency benchmark |
 
 ## Stage 1 — Fake Runtime + ZMQ Protocol
 
