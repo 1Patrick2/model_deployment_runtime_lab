@@ -7,7 +7,7 @@ import pytest
 from pydantic import ValidationError
 
 from src.models.manifest import ModelManifest, load_manifest, resolve_artifact_path
-from src.models.registry import load_registry
+from src.models.registry import load_registry, resolve_manifest_path
 
 
 # ── Fixtures ──────────────────────────────────────────────────────
@@ -121,3 +121,36 @@ class TestModelRegistry:
         registry = load_registry(registry_path)
         models = registry.list_models()
         assert len(models) == 1
+
+
+# ── Real repository file tests ────────────────────────────────────
+
+
+class TestRealManifestFiles:
+    """Smoke tests that load the actual manifest and registry files
+    checked into the repository, not temporary fixtures."""
+
+    def test_real_manifest_file_can_be_loaded(self):
+        manifest = load_manifest(
+            "models/manifests/mobilenetv3_small_onnx_fp32.json"
+        )
+        assert manifest.model_id == "mobilenetv3_small"
+        assert manifest.backend == "onnx"
+        assert manifest.input_shape == [1, 3, 224, 224]
+
+    def test_real_registry_can_find_manifest(self):
+        registry = load_registry("models/registry.json")
+        entry = registry.find_manifest_by_model_id(
+            "mobilenetv3_small", backend="onnx"
+        )
+        assert entry is not None
+        assert entry["manifest_path"] == (
+            "models/manifests/mobilenetv3_small_onnx_fp32.json"
+        )
+
+    def test_real_registry_manifest_path_resolves_to_existing_file(self):
+        registry = load_registry("models/registry.json")
+        entry = registry.find_manifest_by_model_id("mobilenetv3_small")
+        assert entry is not None
+        resolved = resolve_manifest_path(Path.cwd(), entry)
+        assert resolved.exists(), f"Manifest file not found: {resolved}"

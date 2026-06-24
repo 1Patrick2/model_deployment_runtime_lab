@@ -56,7 +56,20 @@ def load_registry(path: str | Path) -> ModelRegistry:
     return ModelRegistry(entries)
 
 
+def resolve_manifest_path(project_root: Path, registry_entry: dict) -> Path:
+    """Resolve the ``manifest_path`` from a registry entry to an absolute path.
+
+    Relative paths are treated as relative to ``project_root``.
+    The entry must contain a ``manifest_path`` key.
+    """
+    p = Path(registry_entry["manifest_path"])
+    if p.is_absolute():
+        return p
+    return project_root / p
+
+
 __all__ = [
     "ModelRegistry",
     "load_registry",
+    "resolve_manifest_path",
 ]

@@ -129,15 +129,14 @@ python -m src.server.zmq_client --input samples/images/danger_scene.jpg
 
 ## Current Status
 
-**Stage 1 — Fake Runtime + ZMQ Protocol** complete.
+**Stage 2 — ONNX Runtime Backend (in progress).**
 
-- ✅ Inference request/response protocol (Pydantic models)
-- ✅ Runtime backend interface (`BaseRunner`) + `FakeRunner` implementation
-- ✅ ZMQ REQ/REP server with `--backend`, `--host`, `--port` options
-- ✅ ZMQ client with `--input`, `--backend`, `--timeout-ms` options
-- ✅ Error handling: `INVALID_REQUEST`, `UNSUPPORTED_BACKEND`, `RUNTIME_ERROR`
-- ✅ `handle_request_json` extracted as testable server core
-- ✅ 23 unit tests covering protocol, fake runner, and server handler
+- ✅ Stage 1: Fake runtime + ZMQ protocol, 24 tests
+- ✅ Stage 2.1: Model manifest / registry with Pydantic schema
+- ⏳ Stage 2.2: ONNX export (MobileNetV3-small)
+- ⏳ Stage 2.3: ONNX Runtime runner
+- ⏳ Stage 2.4: ZMQ backend=onnx
+- ⏳ Stage 2.5: Latency benchmark
 
 ## Hard Boundaries (First Version)
 

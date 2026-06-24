@@ -11,7 +11,7 @@ import json
 from pathlib import Path
 from typing import List, Optional, Tuple
 
-from pydantic import BaseModel, Field, ValidationError
+from pydantic import BaseModel
 
 
 class PreprocessConfig(BaseModel):
