@@ -1,0 +1,12 @@
+# Benchmark configuration
+
+backend: onnx
+manifest: models/manifests/mobilenetv3_small_onnx_fp32.json
+input_type: dummy
+input: dummy
+
+warmup: 10
+repeat: 100
+
+output_json: outputs/reports/benchmark_mobilenetv3_small_onnx_fp32.json
+output_md: outputs/reports/benchmark_mobilenetv3_small_onnx_fp32.md
