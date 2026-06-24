@@ -67,3 +67,8 @@ Thumbs.db
 *.temp
 .cache/
 .pytest_cache/
+
+# Generated reports
+outputs/reports/*.json
+outputs/reports/*.md
+!outputs/reports/.gitkeep
