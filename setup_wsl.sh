@@ -66,10 +66,21 @@ else
     echo -e "${CYAN}Cloning RKNN Toolkit2 (sparse)...${NC}"
     git clone --filter=blob:none --sparse https://github.com/airockchip/rknn-toolkit2.git "$RKNN_DIR"
     cd "$RKNN_DIR"
-    git sparse-checkout set packages/x86_64
+    git sparse-checkout set rknn-toolkit2/packages/x86_64
 fi
 
-cd "${RKNN_DIR}/packages/x86_64" || { echo -e "${RED}packages/x86_64 not found${NC}"; exit 1; }
+# Determine package directory (handle both nested and flat layouts)
+if [ -d "${RKNN_DIR}/rknn-toolkit2/packages/x86_64" ]; then
+    PKG_DIR="${RKNN_DIR}/rknn-toolkit2/packages/x86_64"
+elif [ -d "${RKNN_DIR}/packages/x86_64" ]; then
+    PKG_DIR="${RKNN_DIR}/packages/x86_64"
+else
+    echo -e "${RED}ERROR: packages/x86_64 not found under ${RKNN_DIR}${NC}"
+    echo -e "${YELLOW}  Tried: ${RKNN_DIR}/rknn-toolkit2/packages/x86_64${NC}"
+    echo -e "${YELLOW}  Tried: ${RKNN_DIR}/packages/x86_64${NC}"
+    exit 1
+fi
+cd "$PKG_DIR"
 
 # Install RKNN toolkit wheel
 WHEEL=$(ls -t rknn_toolkit2*cp310*.whl 2>/dev/null | head -1)
@@ -78,7 +89,7 @@ if [ -n "$WHEEL" ]; then
     pip install "$WHEEL"
     echo -e "${GREEN}✅ RKNN Toolkit2 installed${NC}"
 else
-    echo -e "${YELLOW}⚠️  No cp310 RKNN wheel found. Check ${RKNN_DIR}/packages/x86_64/ manually.${NC}"
+    echo -e "${YELLOW}⚠️  No cp310 RKNN wheel found in ${PKG_DIR}. Check manually.${NC}"
 fi
 
 echo -e "${GREEN}╔══════════════════════════════════════════════════════════════╗${NC}"
