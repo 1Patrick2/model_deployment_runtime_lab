@@ -1,19 +1,22 @@
 # Model Deployment Runtime Lab - Windows Setup Script
-# 此脚本用于配置模型部署运行时的 Conda 环境
+# ASCII-only version to avoid PowerShell encoding issues.
 
-$ErrorActionPreference = 'Stop'
+$ErrorActionPreference = "Stop"
 
 $ScriptDir = $PSScriptRoot
-if ([string]::IsNullOrEmpty($ScriptDir)) { $ScriptDir = (Get-Location).Path }
+if ([string]::IsNullOrEmpty($ScriptDir)) {
+    $ScriptDir = (Get-Location).Path
+}
 
-Write-Host "╔══════════════════════════════════════════════════════════════╗" -ForegroundColor Green
-Write-Host "║  Model Deployment Runtime Lab - Windows Setup                ║" -ForegroundColor Green
-Write-Host "╚══════════════════════════════════════════════════════════════╝" -ForegroundColor Green
-
-Write-Host "`nThis script will set up Conda environments for:" -ForegroundColor Yellow
-Write-Host "  1. mdrl-runtime — ONNX Runtime, ZMQ, benchmark"
-Write-Host "  2. mdrl-dev     — pytest, dev tools"
-Write-Host "  3. mdrl-train   — optional: PyTorch baseline, pruning (with --with-train)`n"
+Write-Host "============================================================"
+Write-Host " Model Deployment Runtime Lab - Windows Setup"
+Write-Host "============================================================"
+Write-Host ""
+Write-Host "This script will set up Conda environments:"
+Write-Host "  1. mdrl-runtime : ONNX Runtime, ZMQ, benchmark"
+Write-Host "  2. mdrl-dev     : pytest and dev tools"
+Write-Host "  3. mdrl-train   : optional PyTorch baseline and pruning"
+Write-Host ""
 
 function Fail($msg) {
     Write-Host "ERROR: $msg" -ForegroundColor Red
@@ -26,67 +29,108 @@ function CheckCommand($name, $hint) {
     }
 }
 
-Write-Host "Checking required commands..." -ForegroundColor Cyan
-CheckCommand conda "Please install Miniconda or Anaconda: https://docs.conda.io/en/latest/miniconda.html"
-CheckCommand git "Please install Git (https://git-scm.com/)"
-Write-Host "✅ Required commands present`n" -ForegroundColor Green
+function InstallRequirements($envName, $reqFile) {
+    if (-not $reqFile) {
+        return
+    }
 
-# Accept Conda Terms of Service
-Write-Host "Accepting Conda Terms of Service..." -ForegroundColor Cyan
-& conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/main 2>$null
-& conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/r 2>$null
+    if (-not (Test-Path $reqFile -PathType Leaf)) {
+        Fail "Requirements file not found: $reqFile"
+    }
 
-function EnsureCondaEnv($name, $reqFile) {
-    Write-Host "`n>>> Environment: $name" -ForegroundColor Cyan
-    $envs = & conda env list --json | ConvertFrom-Json
-    $exists = $envs.envs | Where-Object { $_ -match "\\$name$" }
-    if ($exists) {
-        Write-Host "  ✅ Conda environment '$name' already exists. Updating dependencies..." -ForegroundColor Yellow
-        if ($reqFile -and (Test-Path $reqFile)) {
-            & conda run -n $name pip install -r $reqFile 2>&1 | ForEach-Object { Write-Host "     $_" }
-            if ($LASTEXITCODE -ne 0) { Fail "pip install failed for $name in $reqFile" }
-        }
-        Write-Host "  ✅ $name up to date`n" -ForegroundColor Green
-    } else {
-        Write-Host "  Creating Conda environment '$name' (python=3.10)..." -ForegroundColor Yellow
-        & conda create -n $name python=3.10 -y 2>&1 | ForEach-Object { Write-Host "     $_" }
-        if ($LASTEXITCODE -ne 0) { Fail "conda create failed for $name" }
-        if ($reqFile -and (Test-Path $reqFile)) {
-            & conda run -n $name pip install -r $reqFile 2>&1 | ForEach-Object { Write-Host "     $_" }
-            if ($LASTEXITCODE -ne 0) { Fail "pip install failed for $name in $reqFile" }
-        }
-        Write-Host "  ✅ $name created and dependencies installed`n" -ForegroundColor Green
+    Write-Host "Installing requirements for $envName from $reqFile"
+    & conda run -n $envName pip install -r $reqFile
+    if ($LASTEXITCODE -ne 0) {
+        Fail "pip install failed for $envName using $reqFile"
     }
 }
 
-# Parse optional flags
-$withTrain = $args -contains '--with-train'
+function EnsureCondaEnv($name, $reqFile) {
+    Write-Host ""
+    Write-Host ">>> Environment: $name" -ForegroundColor Cyan
 
-# 1. mdrl-runtime
-EnsureCondaEnv "mdrl-runtime" (Join-Path $ScriptDir "requirements_win_runtime.txt")
+    $envsJson = & conda env list --json
+    if ($LASTEXITCODE -ne 0) {
+        Fail "conda env list failed"
+    }
 
-# 2. mdrl-dev
-EnsureCondaEnv "mdrl-dev" (Join-Path $ScriptDir "requirements_win_dev.txt")
+    $envs = $envsJson | ConvertFrom-Json
+    $exists = $false
 
-# 3. Optional: mdrl-train
-if ($withTrain) {
-    EnsureCondaEnv "mdrl-train" (Join-Path $ScriptDir "requirements_win_train.txt")
-} else {
-    Write-Host "`n>>> Environment: mdrl-train (skipped, use --with-train to create)" -ForegroundColor Cyan
+    foreach ($envPath in $envs.envs) {
+        $leaf = Split-Path $envPath -Leaf
+        if ($leaf -eq $name) {
+            $exists = $true
+            break
+        }
+    }
+
+    if ($exists) {
+        Write-Host "Conda environment '$name' already exists. Updating dependencies."
+    }
+    else {
+        Write-Host "Creating Conda environment '$name' with python=3.10"
+        & conda create -n $name python=3.10 -y
+        if ($LASTEXITCODE -ne 0) {
+            Fail "conda create failed for $name"
+        }
+    }
+
+    InstallRequirements $name $reqFile
+    Write-Host "Environment '$name' is ready." -ForegroundColor Green
 }
 
-Write-Host "╔══════════════════════════════════════════════════════════════╗" -ForegroundColor Green
-Write-Host "║  Setup Complete!                                            ║" -ForegroundColor Green
-Write-Host "╚══════════════════════════════════════════════════════════════╝" -ForegroundColor Green
+Write-Host "Checking required commands..."
+CheckCommand conda "Please install Miniconda or Miniforge."
+CheckCommand git "Please install Git."
+Write-Host "Required commands found."
+Write-Host ""
 
-Write-Host "`nNext steps:" -ForegroundColor Yellow
-Write-Host "  conda activate mdrl-runtime" -ForegroundColor Cyan
-Write-Host "  python verify_paths.py" -ForegroundColor Cyan
+# Conda ToS command is available in some conda versions, but not all.
+# Run it best-effort only.
+Write-Host "Checking Conda Terms of Service if supported..."
+& conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/main 2>$null
+& conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/r 2>$null
+Write-Host "Conda ToS check completed or skipped."
 Write-Host ""
-Write-Host "Future stages:" -ForegroundColor Yellow
-Write-Host "  python -m pytest tests -q                        # Stage 1+ tests"
-Write-Host "  python -m src.server.zmq_server --backend fake   # Stage 1: ZMQ server"
+
+$runtimeReq = Join-Path $ScriptDir "requirements_win_runtime.txt"
+$devReq = Join-Path $ScriptDir "requirements_win_dev.txt"
+$trainReq = Join-Path $ScriptDir "requirements_win_train.txt"
+
+# mdrl-runtime is the main environment for running demos and tests.
+EnsureCondaEnv "mdrl-runtime" $runtimeReq
+InstallRequirements "mdrl-runtime" $devReq
+
+# mdrl-dev is kept as a lightweight development-only environment.
+EnsureCondaEnv "mdrl-dev" $devReq
+
+if ($withTrain) {
+    EnsureCondaEnv "mdrl-train" $trainReq
+}
+else {
+    Write-Host ""
+    Write-Host ">>> Environment: mdrl-train skipped."
+    Write-Host 'Run ".\setup_win.ps1 --with-train" to create it.'
+}
+
 Write-Host ""
-Write-Host "Note: PyTorch is NOT auto-installed. If you need training:" -ForegroundColor Magenta
-Write-Host "  1. Activate mdrl-train (conda activate mdrl-train)" -ForegroundColor Magenta
-Write-Host "  2. Install PyTorch from https://pytorch.org (CUDA or CPU)" -ForegroundColor Magenta
+Write-Host "============================================================"
+Write-Host " Setup Complete"
+Write-Host "============================================================"
+Write-Host ""
+Write-Host "Next steps:"
+Write-Host "  conda activate mdrl-runtime"
+Write-Host "  python verify_paths.py"
+Write-Host "  python -m pytest tests -q"
+Write-Host ""
+Write-Host "Stage 1 smoke test:"
+Write-Host "  Terminal 1:"
+Write-Host "    python -m src.server.zmq_server --backend fake"
+Write-Host "  Terminal 2:"
+Write-Host "    python -m src.server.zmq_client --input samples/images/danger_scene.jpg"
+Write-Host ""
+Write-Host "Note:"
+Write-Host "  PyTorch is not installed automatically."
+Write-Host "  If needed, create train env with:"
+Write-Host "    .\setup_win.ps1 --with-train"
