@@ -4,15 +4,18 @@ These tests exercise ``handle_request_json`` directly without a real
 ZMQ socket — fast, deterministic, and CI-friendly.
 """
 
+from pathlib import Path
+
 import pytest
 
 from src.runtime.fake_runner import FakeRunner
+from src.runtime.onnx_runner import OnnxRunner
 from src.server.protocol import (
     INVALID_REQUEST,
     UNSUPPORTED_BACKEND,
     RUNTIME_ERROR,
 )
-from src.server.zmq_server import handle_request_json
+from src.server.zmq_server import handle_request_json, create_runner
 
 
 @pytest.fixture
@@ -79,3 +82,52 @@ class TestHandleRequestJson:
         assert result["status"] == "error"
         assert result["error_type"] == UNSUPPORTED_BACKEND
         assert result["request_id"] == "bad-backend"
+
+
+class TestCreateRunner:
+    """Runner factory."""
+
+    def test_fake_runner_can_be_created(self):
+        runner = create_runner("fake")
+        assert runner.backend_name == "fake"
+        runner.close()
+
+    def test_onnx_backend_requires_manifest(self):
+        with pytest.raises(ValueError, match="requires --manifest"):
+            create_runner("onnx")
+
+    def test_unknown_backend_raises_error(self):
+        with pytest.raises(ValueError, match="unsupported backend"):
+            create_runner("nonexistent")
+
+
+# ── Optional ONNX smoke test ─────────────────────────────────────
+
+
+@pytest.mark.skipif(
+    not Path("outputs/onnx/mobilenetv3_small.onnx").exists(),
+    reason="ONNX artifact not generated; run export_onnx.py first",
+)
+class TestHandleRequestJsonWithOnnxRunner:
+    """These tests only run when the ONNX artifact is present locally."""
+
+    @pytest.fixture(autouse=True)
+    def _setup_runner(self):
+        self.runner = OnnxRunner(
+            manifest_path="models/manifests/mobilenetv3_small_onnx_fp32.json",
+        )
+        self.runner.load()
+        yield
+        self.runner.close()
+
+    def test_dummy_request_returns_ok(self):
+        payload = {
+            "backend": "onnx",
+            "input_type": "dummy",
+            "input": "dummy",
+        }
+        result = handle_request_json(payload, self.runner)
+        assert result["status"] == "ok"
+        assert result["backend"] == "onnx"
+        assert result["prediction"] is not None
+        assert result["latency_ms"]["total"] > 0

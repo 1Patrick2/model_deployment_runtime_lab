@@ -5,6 +5,7 @@ Usage
 .. code-block:: powershell
 
     python -m src.server.zmq_server --backend fake --host 127.0.0.1 --port 5555
+    python -m src.server.zmq_server --backend onnx --manifest models/manifests/mobilenetv3_small_onnx_fp32.json
 """
 
 from __future__ import annotations
@@ -12,12 +13,14 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+from pathlib import Path
 from typing import Optional
 
 import zmq
 
 from src.runtime.base_runner import BaseRunner
 from src.runtime.fake_runner import FakeRunner
+from src.runtime.onnx_runner import OnnxRunner
 from src.server.protocol import (
     INVALID_REQUEST,
     UNSUPPORTED_BACKEND,
@@ -26,17 +29,29 @@ from src.server.protocol import (
     make_error_response,
 )
 
-# ── Registry of supported backends ──────────────────────────────
-# Later backends (onnx, torch, rknn) register themselves here.
 
-_BACKENDS: dict[str, type[BaseRunner]] = {
-    "fake": FakeRunner,
-}
+# ── Runner factory ──────────────────────────────────────────────
 
 
-def register_backend(name: str, runner_cls: type[BaseRunner]) -> None:
-    """Register a new backend so the server can dispatch to it."""
-    _BACKENDS[name] = runner_cls
+def create_runner(backend_name: str, manifest: str | None = None) -> BaseRunner:
+    """Create and load the appropriate runner for *backend_name*.
+
+    Raises ``ValueError`` when the backend is unsupported or required
+    arguments are missing.
+    """
+    if backend_name == "fake":
+        runner = FakeRunner()
+    elif backend_name == "onnx":
+        if manifest is None:
+            raise ValueError("ONNX backend requires --manifest")
+        runner = OnnxRunner(manifest_path=manifest, project_root=Path.cwd())
+    else:
+        supported = "fake, onnx"
+        raise ValueError(
+            f"unsupported backend '{backend_name}'; choose from {{{supported}}}"
+        )
+    runner.load()
+    return runner
 
 
 # ── Request handler (testable without a real ZMQ socket) ────────
@@ -89,27 +104,24 @@ def handle_request_json(payload: dict, runner: BaseRunner) -> dict:
 # ── Server entrypoint ────────────────────────────────────────────
 
 
-def _resolve_backend(backend_name: str) -> BaseRunner:
-    """Look up the runner class, instantiate it, and call ``load()``."""
-    cls = _BACKENDS.get(backend_name)
-    if cls is None:
-        supported = ", ".join(sorted(_BACKENDS))
-        msg = f"unsupported backend '{backend_name}'; choose from {{{supported}}}"
-        print(f"ERROR: {msg}", file=sys.stderr)
-        sys.exit(1)
-    runner = cls()
-    runner.load()
-    return runner
-
-
 def main() -> None:
     parser = argparse.ArgumentParser(description="ZMQ inference server")
     parser.add_argument("--backend", default="fake", help="Runtime backend")
     parser.add_argument("--host", default="127.0.0.1", help="Bind address")
     parser.add_argument("--port", type=int, default=5555, help="Bind port")
+    parser.add_argument(
+        "--manifest",
+        default=None,
+        help="Path to model manifest (required for backend=onnx)",
+    )
     args = parser.parse_args()
 
-    runner = _resolve_backend(args.backend)
+    try:
+        runner = create_runner(args.backend, manifest=args.manifest)
+    except ValueError as exc:
+        print(f"ERROR: {exc}", file=sys.stderr)
+        sys.exit(1)
+
     address = f"tcp://{args.host}:{args.port}"
 
     context = zmq.Context()
