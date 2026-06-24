@@ -6,7 +6,7 @@ Usage
 
     # Use the mdrl-train environment (torch / torchvision required)
     conda activate mdrl-train
-    python -m src.export.export_onnx --model mobilenetv3_small
+    python -m src.export.export_onnx --model mobilenet_v3_small
 """
 
 from __future__ import annotations

@@ -88,20 +88,23 @@ source ~/mdrl-rknn-workdir/rknn-env/bin/activate
 
 ## Step 5: Export ONNX Model (Optional, requires mdrl-train)
 
+> **Note:** PyTorch is intentionally **not** included in `requirements_win_train.txt`
+> because CPU/CUDA selection depends on your device. Install manually below.
+
 ```powershell
 .\setup_win.ps1 --with-train
 conda activate mdrl-train
 
-# Install torch & torchvision (CPU version)
+# Install torch & torchvision (CPU version — or choose CUDA from pytorch.org)
 pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
 
-# Export MobileNetV3-small to ONNX
-python -m src.export.export_onnx --model mobilenet_v3_small --pretrained
+# Export MobileNetV3-small to ONNX (no pretrained weights needed for pipeline test)
+python -m src.export.export_onnx --model mobilenet_v3_small --output outputs/onnx/mobilenetv3_small.onnx
 ```
 
 Expected output:
 ```
-Loading mobilenet_v3_small (pretrained=True) ...
+Loading mobilenet_v3_small (pretrained=False) ...
 Exporting to outputs/onnx/mobilenetv3_small.onnx  (opset=17) ...
 Done.  Artifact size: ~9.8 MB
 ```
