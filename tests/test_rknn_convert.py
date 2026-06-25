@@ -20,12 +20,14 @@ class TestRknnConvert:
         assert report["status"] == "error"
         assert "not found" in report["message"]
 
-    def test_missing_rknn_toolkit_returns_clear_error(self):
+    def test_missing_rknn_toolkit_returns_clear_error(self, tmp_path):
+        # Create a dummy ONNX-like file that exists
+        dummy_onnx = tmp_path / "model.onnx"
+        dummy_onnx.write_text("not a real onnx but file exists")
         config = {
-            "input_model": "models/manifests/mobilenetv3_small_onnx_fp32.json",
-            "output_model": "outputs/rknn/test.rknn",
+            "input_model": str(dummy_onnx),
+            "output_model": str(tmp_path / "test.rknn"),
         }
-        # Use a fake file path that exists
         report = convert_onnx_to_rknn(config)
         assert report["status"] == "error"
         # Should mention RKNN Toolkit, not traceback

@@ -12,12 +12,12 @@ Usage
 from __future__ import annotations
 
 import argparse
-import os
 import sys
 from pathlib import Path
 
 import yaml
 
+from src.benchmark.artifact import compute_onnx_artifact_size_mb
 from src.rknn.report import (
     write_rknn_conversion_json,
     write_rknn_conversion_markdown,
@@ -64,12 +64,16 @@ def convert_onnx_to_rknn(config: dict) -> dict:
 
     rknn_mod = _import_rknn_toolkit()
     if rknn_mod is None:
+        try:
+            onnx_size = compute_onnx_artifact_size_mb(input_model)
+        except Exception:
+            onnx_size = input_model.stat().st_size / (1024 * 1024)
         return {
             "source_model": str(input_model),
             "output_model": str(output_model),
             "target_platform": target_platform,
             "do_quantization": do_quantization,
-            "onnx_size_mb": round(input_model.stat().st_size / (1024 * 1024), 2),
+            "onnx_size_mb": round(onnx_size, 2),
             "rknn_size_mb": 0.0,
             "status": "error",
             "message": (
@@ -79,7 +83,7 @@ def convert_onnx_to_rknn(config: dict) -> dict:
         }
 
     output_model.parent.mkdir(parents=True, exist_ok=True)
-    onnx_size = input_model.stat().st_size / (1024 * 1024)
+    onnx_size = compute_onnx_artifact_size_mb(input_model)
 
     try:
         rknn = rknn_mod.RKNN(verbose=True)

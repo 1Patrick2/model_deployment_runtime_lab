@@ -1,5 +1,13 @@
-onnx==1.14.1
+# Core dependencies for WSL rknn-env
+# ONNX and protobuf versions are pinned because RKNN Toolkit2 2.3.2
+# depends on the legacy onnx.mapping API removed in newer releases.
+onnx==1.16.1
+protobuf==4.25.4
 numpy==1.24.3
 pyyaml==6.0
 pillow==10.0.0
 tqdm==4.66.1
+# scipy is required by RKNN Toolkit2 QuantData.* usage
+scipy>=1.9.3
+# opencv-python-headless is needed by RKNN Toolkit2 dataset preprocessing
+opencv-python-headless==4.10.0.84

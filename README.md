@@ -37,10 +37,10 @@ Model Zoo (MobileNetV3 / ResNet18)
 
 | OS | Role | Environment | Responsibilities |
 |----|------|-------------|------------------|
-| Windows | Main runtime | `mdrl-runtime` | ONNX Runtime, ZMQ, benchmark, report |
+| Windows | Main runtime | `mdrl-runtime` | ONNX Runtime, ZMQ, benchmark, quantization, report |
 | Windows | Dev tools | `mdrl-dev` | pytest, linting |
 | Windows | Optional training | `mdrl-train` | PyTorch baseline, pruning |
-| WSL | RKNN conversion | `rknn-env` | ONNX → RKNN conversion (optional) |
+| WSL | RKNN conversion | `rknn-env` | ONNX → RKNN conversion (optional, via rknn-toolkit2) |
 
 ## Stage Roadmap
 
@@ -147,6 +147,25 @@ python -m src.server.zmq_client --input samples/images/danger_scene.jpg
   - Dynamic INT8: experimental — may fail on CPU due to ConvInteger
   - QDQ INT8: recommended CPU-runnable path (~73% size reduction, comparable latency)
 - ⏳ Stage 4: RKNN conversion preparation
+  - ONNX → RKNN conversion for RK3588 (WSL, requires rknn-toolkit2)
+  - Generated artifact: `outputs/rknn/mobilenetv3_small_fp32.rknn` (~5.5 MB)
+
+### Windows vs WSL Role
+
+| OS | Environment | Responsibilities |
+|----|-------------|------------------|
+| Windows | `mdrl-runtime` | ONNX Runtime, ZMQ, benchmark, quantization, compare reports |
+| WSL | `rknn-env` | ONNX → RKNN conversion via RKNN Toolkit2 |
+
+### RKNN Conversion
+
+Run in WSL:
+
+```bash
+cd /mnt/e/wwx_daily_work/agent/AI_Deploy_Projects/model_deployment_runtime_lab
+source ~/mdrl-rknn-workdir/rknn-env/bin/activate
+python -m src.rknn.convert --config configs/rknn_convert.yaml
+```
 
 ### Quick Commands
 

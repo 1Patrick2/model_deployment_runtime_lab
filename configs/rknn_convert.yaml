@@ -7,7 +7,7 @@ output_model: outputs/rknn/mobilenetv3_small_fp32.rknn
 target_platform: rk3588
 mean_values: [[123.675, 116.28, 103.53]]
 std_values: [[58.395, 57.12, 57.375]]
-quantized_dtype: asymmetric_quantized-u8
+quantized_dtype: w8a8
 
 do_quantization: false
 dataset: null
