@@ -182,6 +182,38 @@ RKNN conversion report written:
 > ONNX and protobuf are pinned (1.16.1, 4.25.4) because RKNN Toolkit2 2.3.2
 > depends on the legacy `onnx.mapping` API.
 
+## Step 9: Real Image HTTP Inference (PowerShell)
+
+```powershell
+conda activate mdrl-runtime
+
+# Terminal 1 — start server
+python -m src.server.http_server --backend onnx --manifest models/manifests/mobilenetv3_small_onnx_fp32.json
+
+# Terminal 2 — send dummy request
+$body = @{ input_type = "dummy"; input = "dummy"; top_k = 5 } | ConvertTo-Json
+Invoke-RestMethod -Uri "http://127.0.0.1:8001/infer" -Method Post `
+    -ContentType "application/json" -Body $body
+```
+
+Expected response:
+```json
+status            : ok
+backend           : onnx
+model_id          : mobilenetv3_small
+model_variant     : onnx_fp32_v1
+top_k_predictions : {class_id=999 class_name=hook score=0.001, ...}
+latency_ms        : @{preprocess=0.16; inference=3.14; postprocess=0.17; total=3.46}
+```
+
+For a real image (place your own photo in ``samples/images/real/``):
+
+```powershell
+$body = @{ input_type = "image_path"; input = "samples/images/real/cup.jpg"; top_k = 5 } | ConvertTo-Json
+Invoke-RestMethod -Uri "http://127.0.0.1:8001/infer" -Method Post `
+    -ContentType "application/json" -Body $body
+```
+
 ## Project Status
 
 | Stage | Status |
@@ -196,6 +228,7 @@ RKNN conversion report written:
 | 2.5 | ✅ Latency benchmark |
 | 3 | ✅ ONNX quantization |
 | 4 | ✅ RKNN conversion |
+| 5.1 | **Current** — HTTP inference server |
 
 ### Windows vs WSL
 

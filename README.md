@@ -56,6 +56,7 @@ Model Zoo (MobileNetV3 / ResNet18)
 | 2.5 | ✅ Complete | Latency benchmark |
 | 3 | ✅ Complete | ONNX QDQ quantization + FP32/INT8 comparison |
 | 4 | ✅ Complete | RKNN conversion (WSL, rknn-toolkit2) |
+| 5.1 | **Current** | Real image HTTP inference server |
 
 ## Stage 1 — Fake Runtime + ZMQ Protocol
 
@@ -135,18 +136,13 @@ python -m src.server.zmq_client --input samples/images/danger_scene.jpg
 
 ## Current Status
 
-**Stage 1–4 complete.**  Project has moved from "ONNX serving skeleton" to "real model deployment pipeline with optimization and end-side conversion."
+**Stage 5.1 — Real Image HTTP Inference Server (in progress).**
 
 | Stage | What | Verified |
 |-------|------|----------|
-| 1 | Fake runtime + ZMQ protocol | Windows `mdrl-runtime`, pytest |
-| 2.1 | Model manifest / registry | Pydantic schema, real-file tests |
-| 2.2 | ONNX export (MobileNetV3-small) | `export_onnx.py` |
-| 2.3 | ONNX Runtime runner | dummy / image input, latency_ms |
-| 2.4 | ZMQ backend=onnx | full client-server ONNX inference |
-| 2.5 | Latency benchmark | FP32 baseline: 9.92 MB, ~1.3 ms mean |
-| 3 | ONNX quantization | QDQ INT8: 2.69 MB (73% reduction), ~1.4 ms mean |
-| 4 | RKNN conversion | WSL `rknn-env`, output 5.48 MB, status=ok |
+| 1–3 | Fake → ONNX → ZMQ → Benchmark → Quantization | Windows `mdrl-runtime`, pytest |
+| 4 | RKNN conversion | WSL `rknn-env`, output 5.48 MB |
+| 5.1 | **HTTP inference server** | `/health` ok, `/metadata` ok, `/infer` dummy ok (total ~3.5 ms) |
 
 ### Quantization Notes
 
@@ -157,10 +153,50 @@ python -m src.server.zmq_client --input samples/images/danger_scene.jpg
 
 | OS | Environment | What it runs |
 |----|-------------|-------------|
-| Windows | `mdrl-runtime` | ONNX Runtime, ZMQ, benchmark, quantization, compare reports, **pytest** |
+| Windows | `mdrl-runtime` | ONNX Runtime, ZMQ, HTTP server, benchmark, quantization, **pytest** |
 | Windows | `mdrl-dev` | Lightweight dev environment for independent pytest / lint |
 | Windows | `mdrl-train` | Optional: PyTorch / torchvision export (CPU/CUDA, install manually) |
 | WSL | `rknn-env` | **Only** RKNN Toolkit2 conversion — no pytest, no ZMQ, no ONNX Runtime |
+
+### Real Image HTTP Server
+
+Run real ONNX inference via HTTP:
+
+```powershell
+# Terminal 1 — start server
+conda activate mdrl-runtime
+python -m src.server.http_server --backend onnx --manifest models/manifests/mobilenetv3_small_onnx_fp32.json
+
+# Terminal 2 — request (PowerShell)
+$body = @{ input_type = "dummy"; input = "dummy"; top_k = 5 } | ConvertTo-Json
+Invoke-RestMethod -Uri "http://127.0.0.1:8001/infer" -Method Post `
+    -ContentType "application/json" -Body $body
+```
+
+For a real image placed in ``samples/images/real/``:
+
+```powershell
+$body = @{ input_type = "image_path"; input = "samples/images/real/cup.jpg"; top_k = 5 } | ConvertTo-Json
+Invoke-RestMethod -Uri "http://127.0.0.1:8001/infer" -Method Post `
+    -ContentType "application/json" -Body $body
+```
+
+Endpoints:
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/health` | Liveness check → `{"status":"ok"}` |
+| GET | `/metadata` | Model metadata (id, variant, backend, shape) |
+| POST | `/infer` | Inference → top-k predictions + latency breakdown |
+
+Latest verified (Windows mdrl-runtime ONNX dummy):
+```
+/health: ok
+/metadata: ok
+/infer: ok, total latency ~3.46 ms
+```
+
+### Quick Commands
 
 ### Quick Commands
 
