@@ -6,3 +6,5 @@ onnxruntime
 pyzmq
 pydantic
 tqdm
+fastapi
+uvicorn
