@@ -38,15 +38,23 @@ echo -e "${GREEN}✅ System dependencies ok${NC}"
 
 # Virtual environment
 ENV_DIR="${RKNN_WORKDIR}/rknn-env"
-if [ -d "$ENV_DIR" ]; then
+if [ -f "$ENV_DIR/bin/activate" ]; then
     echo -e "${YELLOW}⚠️  Environment already exists at ${ENV_DIR}${NC}"
 else
+    if [ -d "$ENV_DIR" ]; then
+        echo -e "${YELLOW}Removing incomplete environment at ${ENV_DIR}${NC}"
+        rm -rf "$ENV_DIR"
+    fi
     echo -e "${CYAN}Creating Python virtual environment...${NC}"
     python3 -m venv "$ENV_DIR"
 fi
 source "$ENV_DIR/bin/activate"
 pip install --upgrade pip
 echo -e "${GREEN}✅ Virtual environment active${NC}"
+
+# Set TMPDIR to the workdir so pip / tools don't use /tmp
+export TMPDIR="${RKNN_WORKDIR}/tmp"
+mkdir -p "$TMPDIR"
 
 # Base requirements
 REQ_FILE="${PROJECT_ROOT}/requirements_wsl_rknn.txt"

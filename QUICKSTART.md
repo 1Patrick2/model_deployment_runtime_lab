@@ -44,7 +44,7 @@ conda activate mdrl-runtime
 python -m pytest tests -q
 ```
 
-All 23 tests should pass.
+All 78 tests should pass (latest verified).
 
 ## Step 4: Try the Fake Inference Server
 
@@ -157,6 +157,31 @@ python -m src.quantization.compare_reports `
     --output-md outputs/reports/compare_mobilenetv3_small_fp32_vs_int8_qdq_dummy.md
 ```
 
+## Step 8: ONNX → RKNN Conversion (WSL only)
+
+```bash
+# In WSL — requires rknn-env set up by setup_wsl.sh
+source ~/mdrl-rknn-workdir/rknn-env/bin/activate
+
+cd /path/to/model_deployment_runtime_lab
+python -m src.rknn.convert --config configs/rknn_convert.yaml
+```
+
+Expected output:
+```
+RKNN conversion report written:
+  JSON: outputs/reports/rknn_convert_mobilenetv3_small_fp32.json
+  MD:   outputs/reports/rknn_convert_mobilenetv3_small_fp32.md
+  status: ok
+  message: Conversion completed successfully.
+```
+
+> **Note:** WSL `rknn-env` is for RKNN conversion only.  It does **not** run
+> pytest, ZMQ, or ONNX Runtime.  The RKNN Toolkit2 wheel is installed with
+> `--no-deps` after manually installing CPU PyTorch, avoiding GPU/CUDA packages.
+> ONNX and protobuf are pinned (1.16.1, 4.25.4) because RKNN Toolkit2 2.3.2
+> depends on the legacy `onnx.mapping` API.
+
 ## Project Status
 
 | Stage | Status |
@@ -170,13 +195,15 @@ python -m src.quantization.compare_reports `
 | 2.4 | ✅ ZMQ backend=onnx |
 | 2.5 | ✅ Latency benchmark |
 | 3 | ✅ ONNX quantization |
-| 4 | **Current** — RKNN conversion preparation |
+| 4 | ✅ RKNN conversion |
 
-### Windows vs WSL Role
+### Windows vs WSL
 
-| OS | Role | Responsibilities |
-|----|------|------------------|
-| Windows `mdrl-runtime` | Main runtime | ONNX Runtime, ZMQ, benchmark, quantization, report |
-| WSL `rknn-env` | RKNN conversion | ONNX → RKNN conversion via RKNN Toolkit2 |
+| OS | Environment | Role |
+|----|-------------|------|
+| Windows | `mdrl-runtime` | ONNX Runtime, ZMQ, benchmark, quantization, **pytest** |
+| Windows | `mdrl-dev` | Lightweight dev / pytest |
+| Windows | `mdrl-train` | Optional: PyTorch export (manual install) |
+| WSL | `rknn-env` | **Only** RKNN Toolkit2 conversion |
 
 See [docs/zmq_protocol_design.md](docs/zmq_protocol_design.md) for protocol details.

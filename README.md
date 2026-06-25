@@ -55,7 +55,7 @@ Model Zoo (MobileNetV3 / ResNet18)
 | 2.4 | ✅ Complete | ZMQ backend=onnx |
 | 2.5 | ✅ Complete | Latency benchmark |
 | 3 | ✅ Complete | ONNX QDQ quantization + FP32/INT8 comparison |
-| 4 | **Current** | RKNN conversion preparation |
+| 4 | ✅ Complete | RKNN conversion (WSL, rknn-toolkit2) |
 
 ## Stage 1 — Fake Runtime + ZMQ Protocol
 
@@ -135,37 +135,32 @@ python -m src.server.zmq_client --input samples/images/danger_scene.jpg
 
 ## Current Status
 
-**Stage 4 — RKNN conversion preparation (in progress).**
+**Stage 1–4 complete.**  Project has moved from "ONNX serving skeleton" to "real model deployment pipeline with optimization and end-side conversion."
 
-- ✅ Stage 1: Fake runtime + ZMQ protocol with unit tests
-- ✅ Stage 2.1: Model manifest / registry with Pydantic schema
-- ✅ Stage 2.2: ONNX export script (MobileNetV3-small)
-- ✅ Stage 2.3: ONNX Runtime runner with dummy / image input
-- ✅ Stage 2.4: ZMQ backend=onnx (full client-server ONNX inference)
-- ✅ Stage 2.5: Latency benchmark (FP32 baseline: 9.92 MB)
-- ✅ Stage 3: ONNX quantization + FP32/QDQ INT8 comparison
-  - Dynamic INT8: experimental — may fail on CPU due to ConvInteger
-  - QDQ INT8: recommended CPU-runnable path (~73% size reduction, comparable latency)
-- ⏳ Stage 4: RKNN conversion preparation
-  - ONNX → RKNN conversion for RK3588 (WSL, requires rknn-toolkit2)
-  - Generated artifact: `outputs/rknn/mobilenetv3_small_fp32.rknn` (~5.5 MB)
+| Stage | What | Verified |
+|-------|------|----------|
+| 1 | Fake runtime + ZMQ protocol | Windows `mdrl-runtime`, pytest |
+| 2.1 | Model manifest / registry | Pydantic schema, real-file tests |
+| 2.2 | ONNX export (MobileNetV3-small) | `export_onnx.py` |
+| 2.3 | ONNX Runtime runner | dummy / image input, latency_ms |
+| 2.4 | ZMQ backend=onnx | full client-server ONNX inference |
+| 2.5 | Latency benchmark | FP32 baseline: 9.92 MB, ~1.3 ms mean |
+| 3 | ONNX quantization | QDQ INT8: 2.69 MB (73% reduction), ~1.4 ms mean |
+| 4 | RKNN conversion | WSL `rknn-env`, output 5.48 MB, status=ok |
 
-### Windows vs WSL Role
+### Quantization Notes
 
-| OS | Environment | Responsibilities |
-|----|-------------|------------------|
-| Windows | `mdrl-runtime` | ONNX Runtime, ZMQ, benchmark, quantization, compare reports |
-| WSL | `rknn-env` | ONNX → RKNN conversion via RKNN Toolkit2 |
+- **Dynamic INT8** (experimental) — may fail on CPUExecutionProvider due to ConvInteger for Conv-heavy CNNs.
+- **QDQ INT8** (recommended CPU-runnable path) — reduces model size by ~73% while keeping CPU dummy-input latency comparable to FP32.
 
-### RKNN Conversion
+### Environment Roles
 
-Run in WSL:
-
-```bash
-cd /mnt/e/wwx_daily_work/agent/AI_Deploy_Projects/model_deployment_runtime_lab
-source ~/mdrl-rknn-workdir/rknn-env/bin/activate
-python -m src.rknn.convert --config configs/rknn_convert.yaml
-```
+| OS | Environment | What it runs |
+|----|-------------|-------------|
+| Windows | `mdrl-runtime` | ONNX Runtime, ZMQ, benchmark, quantization, compare reports, **pytest** |
+| Windows | `mdrl-dev` | Lightweight dev environment for independent pytest / lint |
+| Windows | `mdrl-train` | Optional: PyTorch / torchvision export (CPU/CUDA, install manually) |
+| WSL | `rknn-env` | **Only** RKNN Toolkit2 conversion — no pytest, no ZMQ, no ONNX Runtime |
 
 ### Quick Commands
 
