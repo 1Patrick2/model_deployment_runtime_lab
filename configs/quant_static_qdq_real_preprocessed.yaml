@@ -20,3 +20,5 @@ quantization:
   activation_type: uint8
   weight_type: int8
   preprocess: true
+  skip_symbolic_shape: true
+  fallback_to_original: true
