@@ -67,6 +67,7 @@ Thumbs.db
 *.temp
 .cache/
 .pytest_cache/
+.pytest_tmp/
 
 # Generated reports
 outputs/reports/*.json

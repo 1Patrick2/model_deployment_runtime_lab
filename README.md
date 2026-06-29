@@ -165,7 +165,7 @@ Run real ONNX inference via HTTP:
 ```powershell
 # Terminal 1 — start server
 conda activate mdrl-runtime
-python -m src.server.http_server --backend onnx --manifest models/manifests/mobilenetv3_small_onnx_fp32.json
+python -m src.server.http_server --backend onnx --manifest models/manifests/mobilenetv3_small_onnx_fp32.json --port 8001
 
 # Terminal 2 — request (PowerShell)
 $body = @{ input_type = "dummy"; input = "dummy"; top_k = 5 } | ConvertTo-Json
@@ -195,8 +195,6 @@ Latest verified (Windows mdrl-runtime ONNX dummy):
 /metadata: ok
 /infer: ok, total latency ~3.46 ms
 ```
-
-### Quick Commands
 
 ### Quick Commands
 

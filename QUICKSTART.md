@@ -188,7 +188,7 @@ RKNN conversion report written:
 conda activate mdrl-runtime
 
 # Terminal 1 — start server
-python -m src.server.http_server --backend onnx --manifest models/manifests/mobilenetv3_small_onnx_fp32.json
+python -m src.server.http_server --backend onnx --manifest models/manifests/mobilenetv3_small_onnx_fp32.json --port 8001
 
 # Terminal 2 — send dummy request
 $body = @{ input_type = "dummy"; input = "dummy"; top_k = 5 } | ConvertTo-Json
