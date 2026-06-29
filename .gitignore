@@ -77,3 +77,9 @@ outputs/reports/*.md
 # Generated model artifacts
 outputs/onnx/
 outputs/rknn/
+
+# Representative images for calibration/validation (not committed)
+samples/images/calibration_real/*
+samples/images/validation_real/*
+!samples/images/calibration_real/.gitkeep
+!samples/images/validation_real/.gitkeep
