@@ -6,7 +6,12 @@ Usage
 
     # Use the mdrl-train environment (torch / torchvision required)
     conda activate mdrl-train
-    python -m src.export.export_onnx --model mobilenet_v3_small
+
+    # CLI mode
+    python -m src.export.export_onnx --model mobilenet_v3_small --pretrained
+
+    # Config-driven mode
+    python -m src.export.export_onnx --config configs/export_mobilenetv3_small_imagenet.yaml
 """
 
 from __future__ import annotations
@@ -14,9 +19,18 @@ from __future__ import annotations
 import argparse
 import os
 from pathlib import Path
+from typing import Any, Dict, Optional
 
 import torch
 import torchvision.models as models
+
+
+def _load_config(config_path: str | Path) -> Dict[str, Any]:
+    """Load a YAML export config."""
+    import yaml
+
+    with open(config_path, "r", encoding="utf-8") as f:
+        return yaml.safe_load(f) or {}
 
 
 def export_onnx(
@@ -32,7 +46,6 @@ def export_onnx(
 
     Returns the resolved output path.
     """
-    # Resolve model builder
     model_builder = getattr(models, model_name, None)
     if model_builder is None:
         raise ValueError(
@@ -41,19 +54,15 @@ def export_onnx(
             f"mobilenet_v3_small, resnet18, etc."
         )
 
-    # Load model (eval mode)
     print(f"Loading {model_name} (pretrained={pretrained}) ...")
     model = model_builder(pretrained=pretrained)
     model.eval()
 
-    # Create dummy input
     dummy = torch.randn(*input_shape, requires_grad=False)
 
-    # Ensure output directory exists
     output = Path(output_path)
     output.parent.mkdir(parents=True, exist_ok=True)
 
-    # Export
     print(f"Exporting to {output}  (opset={opset_version}) ...")
     torch.onnx.export(
         model,
@@ -77,26 +86,49 @@ def export_onnx(
 def main() -> None:
     parser = argparse.ArgumentParser(description="Export torchvision model to ONNX")
     parser.add_argument(
+        "--config",
+        help="Path to YAML export config (overrides individual CLI args)",
+    )
+    parser.add_argument(
         "--model",
-        default="mobilenet_v3_small",
+        default=None,
         help="torchvision model function name (default: mobilenet_v3_small)",
     )
     parser.add_argument(
         "--output",
-        default="outputs/onnx/mobilenetv3_small.onnx",
+        default=None,
         help="Output ONNX path",
     )
     parser.add_argument(
         "--pretrained",
         action="store_true",
+        default=None,
         help="Load pretrained weights from torchvision",
     )
     args = parser.parse_args()
 
+    # Load config if provided
+    config: Dict[str, Any] = {}
+    if args.config:
+        config = _load_config(args.config)
+
+    # CLI args override config values
+    model_name = args.model or config.get("model", "mobilenet_v3_small")
+    output_path = args.output or config.get("output", "outputs/onnx/mobilenetv3_small.onnx")
+    pretrained = args.pretrained if args.pretrained is not None else config.get("pretrained", False)
+    input_shape = tuple(config.get("input_shape", [1, 3, 224, 224]))
+    input_name = config.get("input_name", "input")
+    output_name = config.get("output_name", "logits")
+    opset_version = int(config.get("opset_version", 17))
+
     export_onnx(
-        model_name=args.model,
-        output_path=args.output,
-        pretrained=args.pretrained,
+        model_name=model_name,
+        output_path=output_path,
+        pretrained=pretrained,
+        input_shape=input_shape,
+        input_name=input_name,
+        output_name=output_name,
+        opset_version=opset_version,
     )
 
 

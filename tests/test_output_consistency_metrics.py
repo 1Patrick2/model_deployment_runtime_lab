@@ -103,4 +103,35 @@ class TestValidationOutput:
         assert "Quantization Validation Report" in content
         assert "FP32/INT8" in content
         assert "size_reduction_percent" in content
-        assert "FP32/INT8" in content
+
+    def test_confidence_drift_threshold_direction_lower_is_better(self, tmp_path):
+        """mean_confidence_drift: lower values should be OK, high should warn."""
+        report_ok = {
+            "num_images": 5,
+            "top1_consistency": 0.9,
+            "top5_consistency": 0.95,
+            "mean_logits_cosine_similarity": 0.99,
+            "mean_confidence_drift": 0.01,  # low drift = good
+            "fp32_mean_latency_ms": 2.0,
+            "int8_mean_latency_ms": 1.8,
+            "fp32_model_size_mb": 9.92,
+            "int8_model_size_mb": 2.70,
+            "size_reduction_percent": 72.88,
+        }
+        report_bad = dict(report_ok)
+        report_bad["mean_confidence_drift"] = 0.5  # high drift = bad
+
+        p_ok = write_validation_markdown(report_ok, tmp_path / "ok.md")
+        p_bad = write_validation_markdown(report_bad, tmp_path / "bad.md")
+
+        content_ok = p_ok.read_text(encoding="utf-8")
+        content_bad = p_bad.read_text(encoding="utf-8")
+
+        # low drift should have a checkmark, high drift should have a warning
+        ok_lines = [l for l in content_ok.split("\n") if "confidence" in l.lower()]
+        bad_lines = [l for l in content_bad.split("\n") if "confidence" in l.lower()]
+
+        assert ok_lines, "confidence drift line not found in markdown"
+        # At least one line should exist and should differ between ok and bad
+        assert any("✅" in l for l in ok_lines), f"low drift should be checkmark, got: {ok_lines}"
+        assert any("⚠️" in l for l in bad_lines), f"high drift should be warning, got: {bad_lines}"

@@ -55,6 +55,13 @@ def run_validation(config: dict) -> Dict[str, Any]:
     fp32_path = Path(config["fp32_model"])
     int8_path = Path(config["int8_model"])
     image_dir = Path(config["image_dir"])
+
+    if not fp32_path.exists():
+        raise FileNotFoundError(f"FP32 ONNX model not found: {fp32_path}")
+    if not int8_path.exists():
+        raise FileNotFoundError(f"INT8 ONNX model not found: {int8_path}")
+    if not image_dir.is_dir():
+        raise FileNotFoundError(f"Image directory not found: {image_dir}")
     preproc_cfg = config.get("preprocessing", {})
 
     target_size = tuple(preproc_cfg.get("resize", [224, 224]))
@@ -152,15 +159,18 @@ def write_validation_markdown(report: dict, path: str | Path) -> Path:
     ]
 
     thresholds = [
-        ("top1_consistency", "FP32/INT8 top-1 agreement", 0.80),
-        ("top5_consistency", "FP32 top-1 in INT8 top-5", 0.90),
-        ("mean_logits_cosine_similarity", "Logits cosine similarity", 0.98),
-        ("mean_confidence_drift", "Avg confidence drift", 0.05),
+        ("top1_consistency", "FP32/INT8 top-1 agreement", 0.80, False),
+        ("top5_consistency", "FP32 top-1 in INT8 top-5", 0.90, False),
+        ("mean_logits_cosine_similarity", "Logits cosine similarity", 0.98, False),
+        ("mean_confidence_drift", "Avg confidence drift", 0.05, True),
     ]
 
-    for key, label, threshold in thresholds:
+    for key, label, threshold, lower_is_better in thresholds:
         val = report.get(key, 0)
-        ok = "✅" if val >= threshold else "⚠️"
+        if lower_is_better:
+            ok = "✅" if val <= threshold else "⚠️"
+        else:
+            ok = "✅" if val >= threshold else "⚠️"
         lines.append(f"| {label} | {val} | {ok} |")
 
     lines += [
