@@ -5,7 +5,9 @@ int8_model: outputs/onnx/mobilenetv3_small_imagenet_int8_qdq_real.onnx
 image_dir: samples/images/validation_real
 
 preprocessing:
-  resize: [224, 224]
+  mode: imagenet_v1
+  resize_shorter: 256
+  center_crop: [224, 224]
   mean: [0.485, 0.456, 0.406]
   std: [0.229, 0.224, 0.225]
 

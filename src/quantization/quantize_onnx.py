@@ -154,6 +154,8 @@ def _run_static_qdq_real(inp: Path, out: Path, config: Dict[str, Any]) -> dict:
     max_samples = int(cal_cfg.get("max_samples", 50))
     mean = cal_cfg.get("mean", [0.485, 0.456, 0.406])
     std = cal_cfg.get("std", [0.229, 0.224, 0.225])
+    preprocess_mode = cal_cfg.get("preprocessing", "simple")
+    resize_shorter = int(cal_cfg.get("resize_shorter", 256))
 
     input_meta = inferred.graph.input[0]
     input_name = input_meta.name
@@ -166,6 +168,7 @@ def _run_static_qdq_real(inp: Path, out: Path, config: Dict[str, Any]) -> dict:
         mean=tuple(mean),
         std=tuple(std),
         max_samples=max_samples,
+        preprocess_mode=preprocess_mode,
     )
 
     import tempfile

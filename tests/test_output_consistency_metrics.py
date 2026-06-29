@@ -133,8 +133,8 @@ class TestValidationOutput:
 
         assert ok_lines, "confidence drift line not found in markdown"
         # At least one line should exist and should differ between ok and bad
-        assert any("✅" in l for l in ok_lines), f"low drift should be checkmark, got: {ok_lines}"
-        assert any("⚠️" in l for l in bad_lines), f"high drift should be warning, got: {bad_lines}"
+        assert any("PASS" in l for l in ok_lines), f"low drift should be PASS, got: {ok_lines}"
+        assert any("WARN" in l for l in bad_lines), f"high drift should be WARN, got: {bad_lines}"
 
     def test_per_image_samples_table_in_markdown(self, tmp_path):
         report = {

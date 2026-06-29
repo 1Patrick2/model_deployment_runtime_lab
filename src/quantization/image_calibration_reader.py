@@ -18,15 +18,33 @@ def _preprocess_for_calibration(
     target_size: tuple[int, int] = (224, 224),
     mean: tuple[float, float, float] = (0.485, 0.456, 0.406),
     std: tuple[float, float, float] = (0.229, 0.224, 0.225),
+    mode: str = "simple",
 ) -> np.ndarray:
     """Load and preprocess a single image for calibration.
+
+    Args:
+        mode: "simple" — direct resize to *target_size*.
+              "imagenet" — resize shorter side to 256, center crop 224.
 
     Returns an NCHW float32 tensor.
     """
     from PIL import Image
 
     img = Image.open(image_path).convert("RGB")
-    img = img.resize(target_size)
+
+    if mode == "imagenet":
+        # Resize shorter side to 256
+        w, h = img.size
+        ratio = 256 / min(w, h)
+        new_size = (int(w * ratio), int(h * ratio))
+        img = img.resize(new_size, Image.BILINEAR)
+        # Center crop 224
+        new_w, new_h = new_size
+        left = (new_w - target_size[0]) // 2
+        top = (new_h - target_size[1]) // 2
+        img = img.crop((left, top, left + target_size[0], top + target_size[1]))
+    else:
+        img = img.resize(target_size)
 
     arr = np.asarray(img, dtype=np.float32) / 255.0
     arr = (arr - np.array(mean, dtype=np.float32)) / np.array(std, dtype=np.float32)
@@ -40,10 +58,12 @@ class ImageCalibrationDataReader(CalibrationDataReader):
     Args:
         image_dir: Directory containing JPEG/PNG images.
         input_name: ONNX model input name.
-        target_size: (height, width) for resize.
+        target_size: (height, width) for resize/crop.
         mean: ImageNet mean for normalization.
         std: ImageNet std for normalization.
         max_samples: Maximum number of images to use.
+        preprocess_mode: ``"simple"`` (direct resize) or ``"imagenet"``
+            (resize shorter side → center crop).
 
     Raises:
         FileNotFoundError: If *image_dir* does not exist.
@@ -58,11 +78,13 @@ class ImageCalibrationDataReader(CalibrationDataReader):
         mean: tuple[float, float, float] = (0.485, 0.456, 0.406),
         std: tuple[float, float, float] = (0.229, 0.224, 0.225),
         max_samples: int = 50,
+        preprocess_mode: str = "simple",
     ) -> None:
         self._input_name = input_name
         self._target_size = target_size
         self._mean = mean
         self._std = std
+        self._preprocess_mode = preprocess_mode
 
         image_dir = Path(image_dir)
         if not image_dir.is_dir():
@@ -95,6 +117,7 @@ class ImageCalibrationDataReader(CalibrationDataReader):
             target_size=self._target_size,
             mean=self._mean,
             std=self._std,
+            mode=self._preprocess_mode,
         )
         return {self._input_name: tensor}
 

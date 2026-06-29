@@ -20,7 +20,6 @@ import onnxruntime
 import yaml
 
 from src.benchmark.artifact import compute_onnx_artifact_size_mb
-from src.runtime.image_preprocess import preprocess_image
 from src.validation.metrics import (
     max_absolute_error,
     max_confidence_drift,
@@ -64,8 +63,17 @@ def run_validation(config: dict) -> Dict[str, Any]:
     if not image_dir.is_dir():
         raise FileNotFoundError(f"Image directory not found: {image_dir}")
     preproc_cfg = config.get("preprocessing", {})
+    preproc_mode = preproc_cfg.get("mode", "simple")
 
-    target_size = tuple(preproc_cfg.get("resize", [224, 224]))
+    if preproc_mode == "imagenet_v1":
+        from src.runtime.image_preprocess import preprocess_image_imagenet as pp_func
+        target_size = tuple(preproc_cfg.get("center_crop", [224, 224]))
+        resize_shorter = int(preproc_cfg.get("resize_shorter", 256))
+    else:
+        from src.runtime.image_preprocess import preprocess_image as pp_func
+        target_size = tuple(preproc_cfg.get("resize", [224, 224]))
+        resize_shorter = 0  # unused in simple mode
+
     mean = tuple(preproc_cfg.get("mean", [0.485, 0.456, 0.406]))
     std = tuple(preproc_cfg.get("std", [0.229, 0.224, 0.225]))
 
@@ -92,12 +100,21 @@ def run_validation(config: dict) -> Dict[str, Any]:
     per_image_results: list[dict] = []
 
     for img_path in image_paths:
-        tensor = preprocess_image(
-            str(img_path),
-            target_size=target_size,
-            mean=mean,
-            std=std,
-        )
+        if preproc_mode == "imagenet_v1":
+            tensor = pp_func(
+                str(img_path),
+                crop_size=target_size,
+                resize_shorter=resize_shorter,
+                mean=mean,
+                std=std,
+            )
+        else:
+            tensor = pp_func(
+                str(img_path),
+                target_size=target_size,
+                mean=mean,
+                std=std,
+            )
 
         t0 = time.perf_counter()
         fp32_out = fp32_session.run(None, {fp32_input_name: tensor})
@@ -226,9 +243,9 @@ def write_validation_markdown(report: dict, path: str | Path) -> Path:
     for key, label, threshold, lower_is_better in thresholds:
         val = report.get(key, 0)
         if lower_is_better:
-            ok = "✅" if val <= threshold else "⚠️"
+            ok = "PASS" if val <= threshold else "WARN"
         else:
-            ok = "✅" if val >= threshold else "⚠️"
+            ok = "PASS" if val >= threshold else "WARN"
         lines.append(f"| {label} | {val} | {ok} |")
 
     lines += [
@@ -271,8 +288,8 @@ def _write_per_image_table(report: dict, lines: list) -> None:
 
         fp32_name = label_for_class_id(s["fp32_top1_index"])
         int8_name = label_for_class_id(s["int8_top1_index"])
-        match = "✅" if s["top1_match"] else "❌"
-        in5 = "✅" if s["fp32_top1_in_int8_top5"] else "❌"
+        match = "PASS" if s["top1_match"] else "FAIL"
+        in5 = "PASS" if s["fp32_top1_in_int8_top5"] else "FAIL"
         lines.append(
             f"| {s['image_path']} | {fp32_name} | {int8_name} "
             f"| {match} | {in5} | {s['top5_overlap']} | {s['logits_cosine_similarity']} |"
