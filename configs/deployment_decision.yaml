@@ -1,0 +1,13 @@
+# Deployment decision report configuration
+# Paths to existing benchmark / conversion / comparison reports.
+
+inputs:
+  fp32_benchmark: outputs/reports/benchmark_mobilenetv3_small_onnx_fp32.json
+  int8_benchmark: outputs/reports/benchmark_mobilenetv3_small_onnx_int8_qdq_dummy.json
+  quant_compare: outputs/reports/compare_mobilenetv3_small_fp32_vs_int8_qdq_dummy.json
+  rknn_convert: outputs/reports/rknn_convert_mobilenetv3_small_fp32.json
+  http_benchmark: outputs/reports/http_benchmark_mobilenetv3_small_onnx_fp32_dummy.json
+
+output:
+  json: outputs/reports/deployment_decision_report.json
+  markdown: outputs/reports/deployment_decision_report.md

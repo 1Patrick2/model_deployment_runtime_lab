@@ -26,7 +26,8 @@ ZMQ/HTTP inference serving, benchmark, RKNN conversion, and deployment reporting
 | 3 | ONNX quantization (dynamic experimental + QDQ INT8 recommended) |
 | 4 | RKNN conversion (WSL, rknn-toolkit2, RK3588, 5.48 MB artifact) |
 | 5.1 | Real image HTTP inference server (FastAPI) |
-| 5.2 | **Current** — HTTP inference benchmark |
+| 5.2 | HTTP inference benchmark |
+| 5.3 | **Current** — Deployment decision report |
 
 ---
 
@@ -121,6 +122,12 @@ python -m pytest tests -q
 - client_total_ms mean: 5.68 ms
 - server_total_ms mean: 1.87 ms
 
+**Deployment decision report (all evidence present):**
+- PC CPU serving: onnx_fp32
+- Size-sensitive CPU: qdq_int8
+- RK3588: artifact ready, board validation pending
+- Risks: dummy calibration, no RK3588 board, local loopback only
+
 **RKNN conversion (WSL):**
 - RKNN Toolkit2 2.3.2 installed
 - MobileNetV3-small → RK3588 conversion successful
@@ -130,5 +137,5 @@ python -m pytest tests -q
 
 ## Next
 
-Stage 5.3 → Deployment Decision Report (aggregate all benchmark/reports into one deploy/no-deploy recommendation)
-Stage 5.4 → Deployment Advisor / explainer (optional, rule-based)
+Stage 5.4 → Deployment Advisor (optional rule-based report explainer)
+Stage 6 → RK3588 board validation (when hardware is available)

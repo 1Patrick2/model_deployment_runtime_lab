@@ -248,7 +248,23 @@ server_total_ms:     mean ~1.9 ms
 | 3 | ✅ ONNX quantization |
 | 4 | ✅ RKNN conversion |
 | 5.1 | ✅ HTTP inference server |
-| 5.2 | **Current** — HTTP benchmark |
+| 5.2 | ✅ HTTP benchmark |
+| 5.3 | **Current** — Deployment decision report |
+
+## Step 11: Deployment Decision Report
+
+```powershell
+conda activate mdrl-runtime
+python -m src.report.deployment_decision --config configs/deployment_decision.yaml
+```
+
+Expected output:
+```
+PC CPU serving:              onnx_fp32
+Size-sensitive CPU deploy:   qdq_int8
+RK3588 deployment:           artifact ready, board validation pending
+Risks (3): QDQ INT8 dummy calibration, RK3588 board validation pending, HTTP local loopback only
+```
 
 ### Windows vs WSL
 

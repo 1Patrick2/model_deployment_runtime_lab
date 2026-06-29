@@ -57,7 +57,8 @@ Model Zoo (MobileNetV3 / ResNet18)
 | 3 | ✅ Complete | ONNX QDQ quantization + FP32/INT8 comparison |
 | 4 | ✅ Complete | RKNN conversion (WSL, rknn-toolkit2) |
 | 5.1 | ✅ Complete | Real image HTTP inference server |
-| 5.2 | **Current** | HTTP inference benchmark |
+| 5.2 | ✅ Complete | HTTP inference benchmark |
+| 5.3 | **Current** | Deployment decision report |
 
 ## Stage 1 — Fake Runtime + ZMQ Protocol
 
@@ -137,14 +138,15 @@ python -m src.server.zmq_client --input samples/images/danger_scene.jpg
 
 ## Current Status
 
-**Stage 5.2 — HTTP Inference Benchmark (in progress).**
+**Stage 5.3 — Deployment Decision Report (in progress).**
 
 | Stage | What | Verified |
 |-------|------|----------|
 | 1–3 | Fake → ONNX → ZMQ → Benchmark → Quantization | Windows `mdrl-runtime`, pytest |
 | 4 | RKNN conversion | WSL `rknn-env`, output 5.48 MB |
 | 5.1 | Real image HTTP inference server | `/infer` dummy + image_path ok |
-| 5.2 | **HTTP benchmark** | 100% success rate, client/server latency breakdown |
+| 5.2 | HTTP inference benchmark | 100% success rate, client/server latency breakdown |
+| 5.3 | **Deployment decision report** | Aggregates all reports into deploy/no-deploy recommendations |
 
 ### Quantization Notes
 
@@ -196,6 +198,21 @@ Latest verified (Windows mdrl-runtime ONNX dummy):
 /health: ok
 /metadata: ok
 /infer: ok, total latency ~3.46 ms
+```
+
+### Deployment Decision Report
+
+Aggregate all benchmark/quantization/RKNN reports into one deploy/no-deploy recommendation:
+
+```powershell
+python -m src.report.deployment_decision --config configs/deployment_decision.yaml
+```
+
+Latest verified:
+```
+PC CPU serving:              onnx_fp32
+Size-sensitive CPU deploy:   qdq_int8 (~73% smaller)
+RK3588 deployment:           artifact ready, board validation pending
 ```
 
 ### HTTP Benchmark
