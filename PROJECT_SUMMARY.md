@@ -27,7 +27,8 @@ ZMQ/HTTP inference serving, benchmark, RKNN conversion, and deployment reporting
 | 4 | RKNN conversion (WSL, rknn-toolkit2, RK3588, 5.48 MB artifact) |
 | 5.1 | Real image HTTP inference server (FastAPI) |
 | 5.2 | HTTP inference benchmark |
-| 5.3 | **Current** — Deployment decision report |
+| 5.3 | Deployment decision report |
+| 5.4 | **Current** — Rule-based deployment advisor |
 
 ---
 
@@ -128,6 +129,12 @@ python -m pytest tests -q
 - RK3588: artifact ready, board validation pending
 - Risks: dummy calibration, no RK3588 board, local loopback only
 
+**Deployment advisor:**
+- Generates plain-English explanations from decision report
+- Covers PC CPU, size-sensitive, RK3588 recommendations
+- Identifies key risks and priority next steps
+- No LLM, no external API
+
 **RKNN conversion (WSL):**
 - RKNN Toolkit2 2.3.2 installed
 - MobileNetV3-small → RK3588 conversion successful
@@ -137,5 +144,5 @@ python -m pytest tests -q
 
 ## Next
 
-Stage 5.4 → Deployment Advisor (optional rule-based report explainer)
+Stage 5.5 → Final documentation and reproduction guide
 Stage 6 → RK3588 board validation (when hardware is available)

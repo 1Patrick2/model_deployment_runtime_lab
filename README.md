@@ -58,7 +58,8 @@ Model Zoo (MobileNetV3 / ResNet18)
 | 4 | ✅ Complete | RKNN conversion (WSL, rknn-toolkit2) |
 | 5.1 | ✅ Complete | Real image HTTP inference server |
 | 5.2 | ✅ Complete | HTTP inference benchmark |
-| 5.3 | **Current** | Deployment decision report |
+| 5.3 | ✅ Complete | Deployment decision report |
+| 5.4 | **Current** | Rule-based deployment advisor |
 
 ## Stage 1 — Fake Runtime + ZMQ Protocol
 
@@ -138,7 +139,7 @@ python -m src.server.zmq_client --input samples/images/danger_scene.jpg
 
 ## Current Status
 
-**Stage 5.3 — Deployment Decision Report (in progress).**
+**Stage 5.4 — Rule-based Deployment Advisor (in progress).**
 
 | Stage | What | Verified |
 |-------|------|----------|
@@ -146,7 +147,8 @@ python -m src.server.zmq_client --input samples/images/danger_scene.jpg
 | 4 | RKNN conversion | WSL `rknn-env`, output 5.48 MB |
 | 5.1 | Real image HTTP inference server | `/infer` dummy + image_path ok |
 | 5.2 | HTTP inference benchmark | 100% success rate, client/server latency breakdown |
-| 5.3 | **Deployment decision report** | Aggregates all reports into deploy/no-deploy recommendations |
+| 5.3 | Deployment decision report | Aggregates all reports into deploy/no-deploy recommendations |
+| 5.4 | **Deployment advisor** | Rule-based explainer for deployment decisions |
 
 ### Quantization Notes
 
@@ -199,6 +201,16 @@ Latest verified (Windows mdrl-runtime ONNX dummy):
 /metadata: ok
 /infer: ok, total latency ~3.46 ms
 ```
+
+### Deployment Advisor
+
+Reads the deployment decision report and generates plain-English engineering explanations:
+
+```powershell
+python -m src.advisor.deployment_advisor --config configs/deployment_advisor.yaml
+```
+
+Outputs recommendations with rationale, key risks, and priority next steps — no LLM, no external API.
 
 ### Deployment Decision Report
 

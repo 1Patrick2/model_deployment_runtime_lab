@@ -1,0 +1,7 @@
+# Deployment advisor configuration
+
+input:
+  decision_report: outputs/reports/deployment_decision_report.json
+
+output:
+  markdown: outputs/reports/deployment_advisor.md

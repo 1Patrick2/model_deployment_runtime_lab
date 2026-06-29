@@ -249,7 +249,8 @@ server_total_ms:     mean ~1.9 ms
 | 4 | ✅ RKNN conversion |
 | 5.1 | ✅ HTTP inference server |
 | 5.2 | ✅ HTTP benchmark |
-| 5.3 | **Current** — Deployment decision report |
+| 5.3 | ✅ Deployment decision report |
+| 5.4 | **Current** — Deployment advisor |
 
 ## Step 11: Deployment Decision Report
 
@@ -265,6 +266,15 @@ Size-sensitive CPU deploy:   qdq_int8
 RK3588 deployment:           artifact ready, board validation pending
 Risks (3): QDQ INT8 dummy calibration, RK3588 board validation pending, HTTP local loopback only
 ```
+
+## Step 12: Deployment Advisor
+
+```powershell
+conda activate mdrl-runtime
+python -m src.advisor.deployment_advisor --config configs/deployment_advisor.yaml
+```
+
+Generates a Markdown explanation of the deployment decision report with recommendations, risks, and next steps.
 
 ### Windows vs WSL
 
