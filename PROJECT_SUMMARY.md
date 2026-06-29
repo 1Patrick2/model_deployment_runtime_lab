@@ -28,7 +28,8 @@ ZMQ/HTTP inference serving, benchmark, RKNN conversion, and deployment reporting
 | 5.1 | Real image HTTP inference server (FastAPI) |
 | 5.2 | HTTP inference benchmark |
 | 5.3 | Deployment decision report |
-| 5.4 | **Current** — Rule-based deployment advisor |
+| 5.4 | Rule-based deployment advisor |
+| 5.5 | **Current** — Final documentation |
 
 ---
 
@@ -110,7 +111,7 @@ ZMQ/HTTP inference serving, benchmark, RKNN conversion, and deployment reporting
 ```powershell
 python -m pytest tests -q
 ```
-→ **95 passed, 2 skipped** (Windows mdrl-runtime)
+→ **121 passed** (Windows mdrl-runtime, ONNX FP32 + QDQ INT8 artifacts present)
 
 **HTTP ONNX inference:**
 - `/health` ok

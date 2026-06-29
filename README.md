@@ -59,7 +59,8 @@ Model Zoo (MobileNetV3 / ResNet18)
 | 5.1 | ✅ Complete | Real image HTTP inference server |
 | 5.2 | ✅ Complete | HTTP inference benchmark |
 | 5.3 | ✅ Complete | Deployment decision report |
-| 5.4 | **Current** | Rule-based deployment advisor |
+| 5.4 | ✅ Complete | Rule-based deployment advisor |
+| 5.5 | **Current** | Final documentation |
 
 ## Stage 1 — Fake Runtime + ZMQ Protocol
 
@@ -116,6 +117,7 @@ Input heuristics:
 | anything else | warning (class_id=1, confidence 0.87) |
 
 See [docs/zmq_protocol_design.md](docs/zmq_protocol_design.md) for the full protocol specification.
+See [docs/stage5_final_summary.md](docs/stage5_final_summary.md) for the complete Stage 5 wrap-up.
 
 ## Quick Reference
 
@@ -139,7 +141,7 @@ python -m src.server.zmq_client --input samples/images/danger_scene.jpg
 
 ## Current Status
 
-**Stage 5.4 — Rule-based Deployment Advisor (in progress).**
+**Stage 5.5 — Final Documentation (in progress).**
 
 | Stage | What | Verified |
 |-------|------|----------|
@@ -148,7 +150,8 @@ python -m src.server.zmq_client --input samples/images/danger_scene.jpg
 | 5.1 | Real image HTTP inference server | `/infer` dummy + image_path ok |
 | 5.2 | HTTP inference benchmark | 100% success rate, client/server latency breakdown |
 | 5.3 | Deployment decision report | Aggregates all reports into deploy/no-deploy recommendations |
-| 5.4 | **Deployment advisor** | Rule-based explainer for deployment decisions |
+| 5.4 | Deployment advisor | Rule-based explainer for deployment decisions |
+| 5.5 | **Final documentation** | Stage 5 summary, reproduction guide |
 
 ### Quantization Notes
 
