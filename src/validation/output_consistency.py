@@ -28,6 +28,7 @@ from src.validation.metrics import (
     mean_confidence_drift,
     mean_logits_cosine_similarity,
     mean_top5_overlap,
+    top_k_indices,
     top1_consistency,
     top5_consistency,
 )
@@ -88,6 +89,7 @@ def run_validation(config: dict) -> Dict[str, Any]:
     int8_logits: List[np.ndarray] = []
     fp32_latencies: list[float] = []
     int8_latencies: list[float] = []
+    per_image_results: list[dict] = []
 
     for img_path in image_paths:
         tensor = preprocess_image(
@@ -100,12 +102,45 @@ def run_validation(config: dict) -> Dict[str, Any]:
         t0 = time.perf_counter()
         fp32_out = fp32_session.run(None, {fp32_input_name: tensor})
         fp32_latencies.append((time.perf_counter() - t0) * 1000)
-        fp32_logits.append(fp32_out[0][0])
+        f_logits = fp32_out[0][0]
+        fp32_logits.append(f_logits)
 
         t0 = time.perf_counter()
         int8_out = int8_session.run(None, {int8_input_name: tensor})
         int8_latencies.append((time.perf_counter() - t0) * 1000)
-        int8_logits.append(int8_out[0][0])
+        i_logits = int8_out[0][0]
+        int8_logits.append(i_logits)
+
+        # Per-image diagnostics
+        fp32_top1 = top_k_indices(f_logits, 1)[0]
+        int8_top1 = top_k_indices(i_logits, 1)[0]
+        fp32_t5 = top_k_indices(f_logits, 5)
+        int8_t5 = top_k_indices(i_logits, 5)
+        top1_match = fp32_top1 == int8_top1
+        fp32_1_in_int8_5 = fp32_top1 in int8_t5
+        fp32_set = set(fp32_t5)
+        int8_set = set(int8_t5)
+        top5_ov = (
+            len(fp32_set & int8_set) / len(fp32_set | int8_set)
+            if fp32_set or int8_set
+            else 1.0
+        )
+        fn = f_logits / (np.linalg.norm(f_logits) + 1e-10)
+        i_norm = i_logits / (np.linalg.norm(i_logits) + 1e-10)
+        cos_sim = float(np.dot(fn, i_norm))
+        per_image_results.append(
+            {
+                "image_path": str(img_path.name),
+                "fp32_top1_index": int(fp32_top1),
+                "int8_top1_index": int(int8_top1),
+                "fp32_top5_indices": [int(x) for x in fp32_t5],
+                "int8_top5_indices": [int(x) for x in int8_t5],
+                "top1_match": top1_match,
+                "fp32_top1_in_int8_top5": fp32_1_in_int8_5,
+                "top5_overlap": round(top5_ov, 4),
+                "logits_cosine_similarity": round(cos_sim, 4),
+            }
+        )
 
     # Compute metrics
     result: Dict[str, Any] = {
@@ -132,6 +167,8 @@ def run_validation(config: dict) -> Dict[str, Any]:
         )
     else:
         result["size_reduction_percent"] = 0.0
+
+    result["per_image_results"] = per_image_results[:10]  # first 10 samples
 
     return result
 
@@ -190,8 +227,35 @@ def write_validation_markdown(report: dict, path: str | Path) -> Path:
         lines.append(f"| {key} | {report.get(key, '')} |")
 
     lines.append("")
+    _write_per_image_table(report, lines)
     p.write_text("\n".join(lines) + "\n", encoding="utf-8")
     return p
+
+
+def _write_per_image_table(report: dict, lines: list) -> None:
+    """Append per-image sample results to the Markdown lines."""
+    samples = report.get("per_image_results", [])
+    if not samples:
+        return
+
+    lines += [
+        "",
+        "## Per-image Samples (first {})".format(len(samples)),
+        "",
+        "| Image | FP32 top1 | INT8 top1 | Match | FP32 top1 in INT8 top5 | Top5 overlap | Cosine sim |",
+        "|---|---|---|---|---|---:|",
+    ]
+    for s in samples:
+        from src.models.imagenet_labels import label_for_class_id
+
+        fp32_name = label_for_class_id(s["fp32_top1_index"])
+        int8_name = label_for_class_id(s["int8_top1_index"])
+        match = "✅" if s["top1_match"] else "❌"
+        in5 = "✅" if s["fp32_top1_in_int8_top5"] else "❌"
+        lines.append(
+            f"| {s['image_path']} | {fp32_name} | {int8_name} "
+            f"| {match} | {in5} | {s['top5_overlap']} | {s['logits_cosine_similarity']} |"
+        )
 
 
 def main() -> None:

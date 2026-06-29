@@ -135,3 +135,33 @@ class TestValidationOutput:
         # At least one line should exist and should differ between ok and bad
         assert any("✅" in l for l in ok_lines), f"low drift should be checkmark, got: {ok_lines}"
         assert any("⚠️" in l for l in bad_lines), f"high drift should be warning, got: {bad_lines}"
+
+    def test_per_image_samples_table_in_markdown(self, tmp_path):
+        report = {
+            "num_images": 5,
+            "top1_consistency": 0.9,
+            "top5_consistency": 0.95,
+            "mean_logits_cosine_similarity": 0.99,
+            "mean_confidence_drift": 0.01,
+            "fp32_mean_latency_ms": 2.0,
+            "int8_mean_latency_ms": 1.8,
+            "fp32_model_size_mb": 9.92,
+            "int8_model_size_mb": 2.70,
+            "size_reduction_percent": 72.88,
+            "per_image_results": [
+                {
+                    "image_path": "test.jpg",
+                    "fp32_top1_index": 281,
+                    "int8_top1_index": 0,
+                    "top1_match": False,
+                    "fp32_top1_in_int8_top5": False,
+                    "top5_overlap": 0.0,
+                    "logits_cosine_similarity": 0.5,
+                }
+            ],
+        }
+        p = write_validation_markdown(report, tmp_path / "per_image.md")
+        content = p.read_text(encoding="utf-8")
+        assert "Per-image Samples" in content
+        assert "test.jpg" in content
+        assert "FP32 top1" in content
