@@ -28,7 +28,7 @@ ZMQ/HTTP inference serving, benchmark, RKNN conversion, and deployment reporting
 | 5.1 | Real image HTTP inference server (FastAPI) |
 | 5.2 | HTTP inference benchmark |
 | 5.3 | Deployment decision report |
-| 5.4 | Rule-based deployment advisor |
+| 5.4 | Complete | Rule-based deployment advisor |
 | 5.5 | **Current** — Final documentation |
 
 ---
@@ -70,7 +70,12 @@ ZMQ/HTTP inference serving, benchmark, RKNN conversion, and deployment reporting
 
 ---
 
-## Platform Roles
+## Project Boundaries
+
+- RKNN conversion is completed, but **RK3588 board-side runtime validation is pending** because RK3588 hardware is not available.
+- QDQ INT8 uses dummy calibration; real accuracy is not validated.
+- HTTP benchmark is local-loopback only, not production network benchmark.
+- `outputs/onnx/`, `outputs/rknn/`, and `outputs/reports/` are local generated artifacts and should not be committed.
 
 | Platform | Environment | Responsibility |
 |----------|-------------|----------------|

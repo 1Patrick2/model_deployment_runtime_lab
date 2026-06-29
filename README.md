@@ -277,9 +277,11 @@ python -m src.quantization.compare_reports `
 This project is NOT:
 - ❌ A YOLO training/detection pipeline
 - ❌ A camera or video processing framework
-- ❌ An RKNN board deployment toolkit
+- ❌ An RKNN board deployment toolkit (board-side validation is pending — no RK3588 hardware)
 - ❌ A large model compression (QAT) framework
 - ❌ A multi-node inference service (Kubernetes / Triton)
+
+> **Note:** `outputs/onnx/`, `outputs/rknn/`, and `outputs/reports/` are local generated artifacts and should not be committed.
 
 ## License
 

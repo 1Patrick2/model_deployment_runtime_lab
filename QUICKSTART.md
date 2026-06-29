@@ -44,7 +44,7 @@ conda activate mdrl-runtime
 python -m pytest tests -q
 ```
 
-All 78 tests should pass (latest verified).
+All 121 tests should pass (latest verified).
 
 ## Step 4: Try the Fake Inference Server
 
@@ -250,7 +250,8 @@ server_total_ms:     mean ~1.9 ms
 | 5.1 | ✅ HTTP inference server |
 | 5.2 | ✅ HTTP benchmark |
 | 5.3 | ✅ Deployment decision report |
-| 5.4 | **Current** — Deployment advisor |
+| 5.4 | ✅ Deployment advisor |
+| 5.5 | **Current** — Final documentation |
 
 ## Step 11: Deployment Decision Report
 

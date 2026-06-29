@@ -73,3 +73,7 @@ Thumbs.db
 outputs/reports/*.json
 outputs/reports/*.md
 !outputs/reports/.gitkeep
+
+# Generated model artifacts
+outputs/onnx/
+outputs/rknn/
