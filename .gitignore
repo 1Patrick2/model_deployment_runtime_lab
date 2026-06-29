@@ -83,3 +83,6 @@ samples/images/calibration_real/*
 samples/images/validation_real/*
 !samples/images/calibration_real/.gitkeep
 !samples/images/validation_real/.gitkeep
+
+# Local image download manifest
+samples/images/image_manifest.json

@@ -3,25 +3,23 @@
 import numpy as np
 import pytest
 
-from src.quantization.image_calibration_reader import (
-    ImageCalibrationDataReader,
-    _preprocess_for_calibration,
-)
+from src.quantization.image_calibration_reader import ImageCalibrationDataReader
+from src.runtime.image_preprocess import preprocess_image_imagenet
 
 
 class TestPreprocessForCalibration:
     """Image preprocessing without full ONNX pipeline."""
 
-    def test_preprocess_returns_correct_shape(self, tmp_path):
+    def test_preprocess_imagenet_returns_correct_shape(self, tmp_path):
         img_path = tmp_path / "test.png"
         from PIL import Image
         Image.new("RGB", (224, 224), color=(128, 128, 128)).save(img_path)
 
-        tensor = _preprocess_for_calibration(img_path)
+        tensor = preprocess_image_imagenet(str(img_path))
         assert tensor.shape == (1, 3, 224, 224)
         assert tensor.dtype == np.float32
 
-    def test_preprocess_empty_image_dir(self, tmp_path):
+    def test_preprocess_imagenet_empty_image_dir(self, tmp_path):
         with pytest.raises((ValueError, FileNotFoundError)):
             ImageCalibrationDataReader(
                 image_dir=tmp_path / "nonexistent",

@@ -169,6 +169,7 @@ def _run_static_qdq_real(inp: Path, out: Path, config: Dict[str, Any]) -> dict:
         std=tuple(std),
         max_samples=max_samples,
         preprocess_mode=preprocess_mode,
+        resize_shorter=resize_shorter,
     )
 
     import tempfile
