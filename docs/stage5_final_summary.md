@@ -26,7 +26,12 @@ PyTorch / torchvision model export to ONNX
 | OS | Windows 11 |
 | Conda env | `mdrl-runtime` |
 | Python | 3.13.13 |
-| Test result | **121 passed** |
+| Test result (clean checkout) | 111 passed, 10 skipped |
+| Test result (full smoke, generated artifacts) | 121 passed, 0 skipped |
+| QDQ INT8 artifact | 2.70 MB (generated locally) |
+| RKNN artifact | 5.48 MB (generated in WSL) |
+
+> The 10 skipped tests are artifact-dependent smoke tests (ONNX checker, ORT session) that require locally generated ONNX files. They are not failures.
 | ONNX FP32 artifact | generated locally (9.92 MB incl. external data) |
 | QDQ INT8 artifact | generated locally (2.70 MB) |
 | RKNN artifact | generated in WSL (5.48 MB) |
@@ -39,6 +44,9 @@ PyTorch / torchvision model export to ONNX
 conda activate mdrl-runtime
 python -m pytest tests -q -rs
 ```
+
+- Clean checkout: **111 passed, 10 skipped**
+- With local ONNX FP32 + QDQ INT8 artifacts: **121 passed, 0 skipped**
 
 ### ONNX export (requires mdrl-train with torch)
 

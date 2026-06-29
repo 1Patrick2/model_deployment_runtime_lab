@@ -44,7 +44,16 @@ conda activate mdrl-runtime
 python -m pytest tests -q
 ```
 
-All 121 tests should pass (latest verified).
+Clean checkout / no generated ONNX artifacts:
+```
+111 passed, 10 skipped
+```
+(The 10 skipped are artifact-dependent smoke tests — not failures.)
+
+With local ONNX FP32 + QDQ INT8 artifacts generated:
+```
+121 passed, 0 skipped
+```
 
 ## Step 4: Try the Fake Inference Server
 

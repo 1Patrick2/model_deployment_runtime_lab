@@ -116,7 +116,9 @@ ZMQ/HTTP inference serving, benchmark, RKNN conversion, and deployment reporting
 ```powershell
 python -m pytest tests -q
 ```
-→ **121 passed** (Windows mdrl-runtime, ONNX FP32 + QDQ INT8 artifacts present)
+→ **Dual-mode:**
+  - Clean checkout / no generated artifacts: **111 passed, 10 skipped**
+  - Full local smoke test / with ONNX FP32 + QDQ INT8 artifacts: **121 passed, 0 skipped**
 
 **HTTP ONNX inference:**
 - `/health` ok
