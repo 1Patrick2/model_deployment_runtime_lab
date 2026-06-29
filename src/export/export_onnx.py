@@ -21,9 +21,6 @@ import os
 from pathlib import Path
 from typing import Any, Dict, Optional
 
-import torch
-import torchvision.models as models
-
 
 def _load_config(config_path: str | Path) -> Dict[str, Any]:
     """Load a YAML export config."""
@@ -46,6 +43,9 @@ def export_onnx(
 
     Returns the resolved output path.
     """
+    import torch
+    import torchvision.models as models
+
     model_builder = getattr(models, model_name, None)
     if model_builder is None:
         raise ValueError(
