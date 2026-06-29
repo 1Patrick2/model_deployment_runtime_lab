@@ -56,7 +56,8 @@ Model Zoo (MobileNetV3 / ResNet18)
 | 2.5 | ✅ Complete | Latency benchmark |
 | 3 | ✅ Complete | ONNX QDQ quantization + FP32/INT8 comparison |
 | 4 | ✅ Complete | RKNN conversion (WSL, rknn-toolkit2) |
-| 5.1 | **Current** | Real image HTTP inference server |
+| 5.1 | ✅ Complete | Real image HTTP inference server |
+| 5.2 | **Current** | HTTP inference benchmark |
 
 ## Stage 1 — Fake Runtime + ZMQ Protocol
 
@@ -142,7 +143,8 @@ python -m src.server.zmq_client --input samples/images/danger_scene.jpg
 |-------|------|----------|
 | 1–3 | Fake → ONNX → ZMQ → Benchmark → Quantization | Windows `mdrl-runtime`, pytest |
 | 4 | RKNN conversion | WSL `rknn-env`, output 5.48 MB |
-| 5.1 | **HTTP inference server** | `/health` ok, `/metadata` ok, `/infer` dummy ok (total ~3.5 ms) |
+| 5.1 | Real image HTTP inference server | `/infer` dummy + image_path ok |
+| 5.2 | **HTTP benchmark** | 100% success rate, client/server latency breakdown |
 
 ### Quantization Notes
 
@@ -194,6 +196,25 @@ Latest verified (Windows mdrl-runtime ONNX dummy):
 /health: ok
 /metadata: ok
 /infer: ok, total latency ~3.46 ms
+```
+
+### HTTP Benchmark
+
+Measure end-to-end serving latency:
+
+```powershell
+# Terminal 1 — start server
+python -m src.server.http_server --backend onnx --manifest models/manifests/mobilenetv3_small_onnx_fp32.json --port 8001
+
+# Terminal 2 — run benchmark
+python -m src.benchmark.http_benchmark --config configs/http_benchmark_fp32_dummy.yaml
+```
+
+Latest verified (Windows mdrl-runtime, 50 requests):
+```
+success_rate:        100%
+client_total_ms:     mean=5.68ms  (HTTP request/response + serialization)
+server_total_ms:     mean=1.87ms  (pure inference inside server)
 ```
 
 ### Quick Commands

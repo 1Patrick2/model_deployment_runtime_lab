@@ -25,7 +25,8 @@ ZMQ/HTTP inference serving, benchmark, RKNN conversion, and deployment reporting
 | 2.5 | Latency benchmark (warmup, repeat, mean/p50/p95, JSON/MD reports) |
 | 3 | ONNX quantization (dynamic experimental + QDQ INT8 recommended) |
 | 4 | RKNN conversion (WSL, rknn-toolkit2, RK3588, 5.48 MB artifact) |
-| 5.1 | **Current** — Real image HTTP inference server (FastAPI) |
+| 5.1 | Real image HTTP inference server (FastAPI) |
+| 5.2 | **Current** — HTTP inference benchmark |
 
 ---
 
@@ -115,6 +116,11 @@ python -m pytest tests -q
 - `/infer` dummy ok (~3.5 ms total)
 - `/infer` image_path ok (~6.7 ms total)
 
+**HTTP benchmark (dummy, 50 requests):**
+- success_rate: 100%
+- client_total_ms mean: 5.68 ms
+- server_total_ms mean: 1.87 ms
+
 **RKNN conversion (WSL):**
 - RKNN Toolkit2 2.3.2 installed
 - MobileNetV3-small → RK3588 conversion successful
@@ -124,4 +130,5 @@ python -m pytest tests -q
 
 ## Next
 
-Stage 5.2 → HTTP Benchmark + Deployment Decision Report
+Stage 5.3 → Deployment Decision Report (aggregate all benchmark/reports into one deploy/no-deploy recommendation)
+Stage 5.4 → Deployment Advisor / explainer (optional, rule-based)

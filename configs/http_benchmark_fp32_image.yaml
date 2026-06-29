@@ -1,0 +1,18 @@
+# HTTP benchmark configuration — real image input
+# Place your own image in samples/images/real/ before running.
+
+endpoint: http://127.0.0.1:8001/infer
+
+request:
+  input_type: image_path
+  input: samples/images/real/cup.jpg
+  top_k: 5
+
+benchmark:
+  warmup: 3
+  repeat: 30
+  timeout_sec: 10
+
+output:
+  json: outputs/reports/http_benchmark_mobilenetv3_small_onnx_fp32_image.json
+  markdown: outputs/reports/http_benchmark_mobilenetv3_small_onnx_fp32_image.md

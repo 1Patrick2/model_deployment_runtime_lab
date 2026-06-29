@@ -214,6 +214,25 @@ Invoke-RestMethod -Uri "http://127.0.0.1:8001/infer" -Method Post `
     -ContentType "application/json" -Body $body
 ```
 
+## Step 10: HTTP Benchmark (Optional)
+
+```powershell
+# Terminal 1 — start server
+conda activate mdrl-runtime
+python -m src.server.http_server --backend onnx --manifest models/manifests/mobilenetv3_small_onnx_fp32.json --port 8001
+
+# Terminal 2 — run benchmark
+conda activate mdrl-runtime
+python -m src.benchmark.http_benchmark --config configs/http_benchmark_fp32_dummy.yaml
+```
+
+Expected output:
+```
+success_rate:        100%
+client_total_ms:     mean ~5.7 ms
+server_total_ms:     mean ~1.9 ms
+```
+
 ## Project Status
 
 | Stage | Status |
@@ -228,7 +247,8 @@ Invoke-RestMethod -Uri "http://127.0.0.1:8001/infer" -Method Post `
 | 2.5 | ✅ Latency benchmark |
 | 3 | ✅ ONNX quantization |
 | 4 | ✅ RKNN conversion |
-| 5.1 | **Current** — HTTP inference server |
+| 5.1 | ✅ HTTP inference server |
+| 5.2 | **Current** — HTTP benchmark |
 
 ### Windows vs WSL
 
