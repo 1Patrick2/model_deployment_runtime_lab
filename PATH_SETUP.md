@@ -1,106 +1,95 @@
-# 路径配置快速设置指南
+# Path Configuration Quick Start
 
-## 🚀 3 步快速开始
+## 3-Step Setup
 
-### 第 1 步：验证项目根目录
+### Step 1: Check Project Root
 
-打开 `configs/paths.yaml` 检查：
+Open `configs/paths.yaml` and verify:
 
 ```yaml
-project_root: null  # ← 保持为 null 让它自动检测
+project_root: null  # keep null for auto-detection
 ```
 
-或手动指定（Windows 示例）：
+Or manually specify an absolute path:
 
 ```yaml
 project_root: C:\Users\YourName\model_deployment_runtime_lab
 ```
 
-### 第 2 步：验证路径配置
+### Step 2: Verify Paths
 
 ```powershell
 python verify_paths.py
 ```
 
-你会看到：
+Expected output:
 
 ```
 Model Deployment Runtime Lab - Path Verification
-
 Project Root: ...
-Critical directories:
-  ✅ configs
-  ✅ src
-  ✅ README.md
-  ⚠️ outputs  planned
-  ⚠️ samples  planned
+[OK] configs
+[OK] src
+[OK] README.md
+[..] outputs (planned)
+[..] samples (planned)
 ```
 
-### 第 3 步：查看完整配置
+### Step 3: View Full Configuration
 
 ```powershell
 python verify_paths.py --show-config
 ```
 
-## 📁 核心配置文件
+## Key Config Files
 
 ### `configs/paths.yaml`
 
-所有路径都定义在这里。示例结构：
+All project paths are defined here:
 
 ```yaml
 project_root: null
 
-artifacts:
-  root: outputs
-  onnx: outputs/onnx
-  quantized: outputs/quantized
-  reports: outputs/reports
-
 configs:
   root: configs
   paths: configs/paths.yaml
-  model: configs/model.yaml
   runtime: configs/runtime.yaml
+  zmq: configs/zmq.yaml
+
+artifacts:
+  onnx: outputs/onnx
+  quantized: outputs/quantized
+  reports: outputs/reports
+  runtime: outputs/runtime
 ```
 
-## 🔧 Python 脚本中使用
+## Using Paths in Python
 
 ```python
 from src.utils.path_manager import paths
 
-# 获取单个路径
+# Get a single path
 onnx_dir = paths.get("artifacts.onnx")
 print(onnx_dir)  # PosixPath('.../outputs/onnx')
 
-# 确保目录存在
+# Ensure a directory exists
 paths.ensure_dir("artifacts.onnx")
 
-# 获取所有路径
+# List all paths in a section
 all_artifacts = paths.get_all("artifacts")
 ```
 
-## ❓ 常见问题
+## Troubleshooting
 
-**Q: 自动检测没有工作？**
-A: 检查 project_root 设置，或手动指定绝对路径
+- **Auto-detection fails?** Set `project_root` to an absolute path in `configs/paths.yaml`.
+- **WSL path issues?** Use `/mnt/c/Users/...` to access Windows files from WSL.
+- **Outputs not in expected location?** Edit `configs/paths.yaml`.
 
-**Q: 在 WSL 中运行需要什么？**
-A: 使用 `/mnt/c/...` 来访问 Windows 路径
-
-**Q: 我的 artifacts 不在 outputs/ 目录？**
-A: 在 `configs/paths.yaml` 中编辑路径即可
-
-## 验证脚本
+## Verification Script
 
 ```powershell
-# 基本验证
+# Basic check
 python verify_paths.py
 
-# 显示完整配置
+# Full config dump
 python verify_paths.py --show-config
 ```
-
----
-
-**所有路径都集中在一个地方。** 🎉
