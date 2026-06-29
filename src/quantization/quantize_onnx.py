@@ -145,8 +145,25 @@ def _run_static_qdq_real(inp: Path, out: Path, config: Dict[str, Any]) -> dict:
 
     Expects the config to have a ``calibration`` section with
     ``image_dir``, ``max_samples``, ``mean``, and ``std``.
+    Optionally supports ``quantization.preprocess: true`` to run
+    ORT ``quant_pre_process`` before quantisation.
     """
-    model = onnx.load(str(inp))
+    quant_cfg = config.get("quantization", {})
+    preprocess_enabled = bool(quant_cfg.get("preprocess", False))
+
+    if preprocess_enabled:
+        from onnxruntime.quantization.shape_inference import quant_pre_process
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as preproc_dir:
+            preproc_path = Path(preproc_dir) / "preprocessed.onnx"
+            quant_pre_process(
+                str(inp), str(preproc_path)
+            )
+            model = onnx.load(str(preproc_path))
+    else:
+        model = onnx.load(str(inp))
+
     inferred = _relaxed_shape_infer(model)
 
     cal_cfg = config.get("calibration", {})
@@ -189,6 +206,7 @@ def _run_static_qdq_real(inp: Path, out: Path, config: Dict[str, Any]) -> dict:
 
     return {
         "calibration_type": "real_image",
+        "preprocess_enabled": preprocess_enabled,
         "num_calibration_images": min(max_samples, len(reader._image_paths)),
         "input_model": str(inp),
         "output_model": str(out),
