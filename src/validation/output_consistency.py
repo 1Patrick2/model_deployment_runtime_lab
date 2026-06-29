@@ -112,33 +112,34 @@ def run_validation(config: dict) -> Dict[str, Any]:
         int8_logits.append(i_logits)
 
         # Per-image diagnostics
-        fp32_top1 = top_k_indices(f_logits, 1)[0]
-        int8_top1 = top_k_indices(i_logits, 1)[0]
-        fp32_t5 = top_k_indices(f_logits, 5)
-        int8_t5 = top_k_indices(i_logits, 5)
-        top1_match = fp32_top1 == int8_top1
-        fp32_1_in_int8_5 = fp32_top1 in int8_t5
+        fp32_top1 = int(top_k_indices(f_logits, 1)[0])
+        int8_top1 = int(top_k_indices(i_logits, 1)[0])
+        fp32_t5 = [int(x) for x in top_k_indices(f_logits, 5)]
+        int8_t5 = [int(x) for x in top_k_indices(i_logits, 5)]
+        top1_match = bool(fp32_top1 == int8_top1)
+        fp32_1_in_int8_5 = bool(fp32_top1 in int8_t5)
         fp32_set = set(fp32_t5)
         int8_set = set(int8_t5)
-        top5_ov = (
+        top5_ov = round(
             len(fp32_set & int8_set) / len(fp32_set | int8_set)
             if fp32_set or int8_set
-            else 1.0
+            else 1.0,
+            4,
         )
-        fn = f_logits / (np.linalg.norm(f_logits) + 1e-10)
+        f_norm = f_logits / (np.linalg.norm(f_logits) + 1e-10)
         i_norm = i_logits / (np.linalg.norm(i_logits) + 1e-10)
-        cos_sim = float(np.dot(fn, i_norm))
+        cos_sim = round(float(np.dot(f_norm, i_norm)), 4)
         per_image_results.append(
             {
                 "image_path": str(img_path.name),
-                "fp32_top1_index": int(fp32_top1),
-                "int8_top1_index": int(int8_top1),
-                "fp32_top5_indices": [int(x) for x in fp32_t5],
-                "int8_top5_indices": [int(x) for x in int8_t5],
+                "fp32_top1_index": fp32_top1,
+                "int8_top1_index": int8_top1,
+                "fp32_top5_indices": fp32_t5,
+                "int8_top5_indices": int8_t5,
                 "top1_match": top1_match,
                 "fp32_top1_in_int8_top5": fp32_1_in_int8_5,
-                "top5_overlap": round(top5_ov, 4),
-                "logits_cosine_similarity": round(cos_sim, 4),
+                "top5_overlap": top5_ov,
+                "logits_cosine_similarity": cos_sim,
             }
         )
 
@@ -173,10 +174,30 @@ def run_validation(config: dict) -> Dict[str, Any]:
     return result
 
 
+def _to_jsonable(obj: Any) -> Any:
+    """Recursively convert NumPy types to JSON-safe Python types."""
+    if isinstance(obj, dict):
+        return {k: _to_jsonable(v) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [_to_jsonable(v) for v in obj]
+    if isinstance(obj, np.bool_):
+        return bool(obj)
+    if isinstance(obj, np.integer):
+        return int(obj)
+    if isinstance(obj, np.floating):
+        return float(obj)
+    if isinstance(obj, np.ndarray):
+        return obj.tolist()
+    return obj
+
+
 def write_validation_json(report: dict, path: str | Path) -> Path:
     p = Path(path)
     p.parent.mkdir(parents=True, exist_ok=True)
-    p.write_text(json.dumps(report, indent=2, ensure_ascii=False), encoding="utf-8")
+    p.write_text(
+        json.dumps(_to_jsonable(report), indent=2, ensure_ascii=False),
+        encoding="utf-8",
+    )
     return p
 
 
@@ -243,7 +264,7 @@ def _write_per_image_table(report: dict, lines: list) -> None:
         "## Per-image Samples (first {})".format(len(samples)),
         "",
         "| Image | FP32 top1 | INT8 top1 | Match | FP32 top1 in INT8 top5 | Top5 overlap | Cosine sim |",
-        "|---|---|---|---|---|---:|",
+        "|---|---|---|---|---|---:|---:|",
     ]
     for s in samples:
         from src.models.imagenet_labels import label_for_class_id

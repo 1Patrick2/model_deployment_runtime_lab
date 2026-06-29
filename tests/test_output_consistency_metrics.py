@@ -165,3 +165,27 @@ class TestValidationOutput:
         assert "Per-image Samples" in content
         assert "test.jpg" in content
         assert "FP32 top1" in content
+
+    def test_json_with_numpy_types_serializes_safely(self, tmp_path):
+        import numpy as np
+        from src.validation.output_consistency import write_validation_json
+
+        report = {
+            "num_images": np.int64(5),
+            "top1_consistency": np.float32(0.9),
+            "top1_match": np.bool_(True),
+            "per_image_results": [
+                {
+                    "fp32_top1_index": np.int64(281),
+                    "top1_match": np.bool_(False),
+                    "top5_overlap": np.float64(0.5),
+                }
+            ],
+        }
+        p = write_validation_json(report, tmp_path / "numpy_report.json")
+        import json
+        data = json.loads(p.read_text(encoding="utf-8"))
+        assert isinstance(data["num_images"], int)
+        assert isinstance(data["top1_consistency"], float)
+        assert isinstance(data["top1_match"], bool)
+        assert data["per_image_results"][0]["fp32_top1_index"] == 281
