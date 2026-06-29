@@ -1,4 +1,4 @@
-"""ONNX quantization script — dynamic and static QDQ (dummy calibration).
+"""ONNX quantization script — dynamic, dummy QDQ, and real-image QDQ.
 
 Usage
 -----
@@ -7,13 +7,17 @@ Usage
     # Dynamic quantization (experimental: ConvInteger may fail on CPU)
     python -m src.quantization.quantize_onnx --config configs/quant_dynamic.yaml
 
-    # Static QDQ quantization with dummy calibration (recommended)
+    # Static QDQ quantization with dummy calibration
     python -m src.quantization.quantize_onnx --config configs/quant_static_qdq_dummy.yaml
+
+    # Static QDQ quantization with real image calibration
+    python -m src.quantization.quantize_onnx --config configs/quant_static_qdq_real.yaml
 """
 
 from __future__ import annotations
 
 import argparse
+import json
 import sys
 from pathlib import Path
 from typing import Any, Dict, Optional
@@ -28,6 +32,8 @@ from onnxruntime.quantization import (
     quantize_dynamic,
     quantize_static,
 )
+
+from src.quantization.image_calibration_reader import ImageCalibrationDataReader
 
 
 # ── Dummy calibration data reader ────────────────────────────────
@@ -134,6 +140,57 @@ def _run_static_qdq(inp: Path, out: Path, config: Dict[str, Any]) -> None:
         )
 
 
+def _run_static_qdq_real(inp: Path, out: Path, config: Dict[str, Any]) -> dict:
+    """Static QDQ quantisation with real image calibration.
+
+    Expects the config to have a ``calibration`` section with
+    ``image_dir``, ``max_samples``, ``mean``, and ``std``.
+    """
+    model = onnx.load(str(inp))
+    inferred = _relaxed_shape_infer(model)
+
+    cal_cfg = config.get("calibration", {})
+    image_dir = cal_cfg.get("image_dir", "samples/images/calibration_real")
+    max_samples = int(cal_cfg.get("max_samples", 50))
+    mean = cal_cfg.get("mean", [0.485, 0.456, 0.406])
+    std = cal_cfg.get("std", [0.229, 0.224, 0.225])
+
+    input_meta = inferred.graph.input[0]
+    input_name = input_meta.name
+    target_size = (224, 224)
+
+    reader = ImageCalibrationDataReader(
+        image_dir=image_dir,
+        input_name=input_name,
+        target_size=target_size,
+        mean=tuple(mean),
+        std=tuple(std),
+        max_samples=max_samples,
+    )
+
+    import tempfile
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        tmp = Path(tmpdir) / "inferred.onnx"
+        onnx.save(inferred, str(tmp))
+
+        quantize_static(
+            model_input=str(tmp),
+            model_output=str(out),
+            calibration_data_reader=reader,
+            quant_format=QuantFormat.QDQ,
+            activation_type=QuantType.QUInt8,
+            weight_type=QuantType.QInt8,
+        )
+
+    return {
+        "calibration_type": "real_image",
+        "num_calibration_images": min(max_samples, len(reader._image_paths)),
+        "input_model": str(inp),
+        "output_model": str(out),
+    }
+
+
 def run_quantization(
     input_path: str | Path,
     output_path: str | Path,
@@ -154,18 +211,37 @@ def run_quantization(
     out = Path(output_path)
     out.parent.mkdir(parents=True, exist_ok=True)
 
-    method = config.get("method", "dynamic")
+    # Detect calibration mode
+    cal = config.get("calibration", {})
+    if isinstance(cal, dict) and cal.get("image_dir"):
+        # Real image calibration path
+        method = "static_qdq_real"
+    else:
+        method = config.get("method", "dynamic")
+
     print(f"Quantizing (method={method}) ...")
     print(f"  input:  {inp.resolve()}")
     print(f"  output: {out.resolve()}")
 
-    if method == "static_qdq":
+    if method == "static_qdq_real":
+        cal_report = _run_static_qdq_real(inp, out, config)
+        print(f"  calibration: {cal_report['calibration_type']}")
+        print(f"  images: {cal_report['num_calibration_images']}")
+    elif method == "static_qdq":
         _run_static_qdq(inp, out, config)
     else:
         _run_dynamic(inp, out)
 
     size_mb = out.stat().st_size / (1024 * 1024)
     print(f"Done.  Artifact size: {size_mb:.2f} MB")
+
+    # Write calibration report
+    if method == "static_qdq_real":
+        report_path = out.with_suffix(".calibration.json")
+        with open(report_path, "w", encoding="utf-8") as f:
+            json.dump({**cal_report, "artifact_size_mb": round(size_mb, 2)}, f, indent=2)
+        print(f"  calibration report: {report_path}")
+
     return out
 
 
@@ -197,8 +273,18 @@ def main() -> None:
     if args.method:
         config["method"] = args.method
 
-    input_model = args.input or config.get("input_model")
-    output_model = args.output or config.get("output_model")
+    # Support both flat and nested config formats
+    model_cfg = config.get("model", config)
+    input_model = (
+        args.input
+        or model_cfg.get("input_onnx")
+        or model_cfg.get("input_model")
+    )
+    output_model = (
+        args.output
+        or model_cfg.get("output_onnx")
+        or model_cfg.get("output_model")
+    )
 
     if not input_model:
         print("ERROR: input_model is required", file=sys.stderr)
@@ -210,6 +296,9 @@ def main() -> None:
     try:
         run_quantization(input_model, output_model, config=config)
     except FileNotFoundError as exc:
+        print(f"ERROR: {exc}", file=sys.stderr)
+        sys.exit(1)
+    except (FileNotFoundError, ValueError) as exc:
         print(f"ERROR: {exc}", file=sys.stderr)
         sys.exit(1)
 
