@@ -1,0 +1,13 @@
+# FP32 vs QDQ INT8 output consistency validation
+
+fp32_model: outputs/onnx/mobilenetv3_small_imagenet_fp32.onnx
+int8_model: outputs/onnx/mobilenetv3_small_imagenet_int8_qdq_real.onnx
+image_dir: samples/images/validation_real
+
+preprocessing:
+  resize: [224, 224]
+  mean: [0.485, 0.456, 0.406]
+  std: [0.229, 0.224, 0.225]
+
+output_json: outputs/reports/quant_validation_mobilenetv3_small_imagenet_fp32_vs_qdq_real.json
+output_md: outputs/reports/quant_validation_mobilenetv3_small_imagenet_fp32_vs_qdq_real.md
