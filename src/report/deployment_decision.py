@@ -10,9 +10,8 @@ Usage
 from __future__ import annotations
 
 import json
-import os
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
 
 import yaml
 
@@ -256,11 +255,11 @@ def write_decision_markdown(report: dict, path: str | Path) -> Path:
         "",
         "## Executive Summary",
         "",
-        "| Target | Recommendation |",
-        "|---|---|",
+        "| Target | Recommendation | Reason |",
+        "|---|---|---|",
     ]
     for rec in report.get("recommendations", []):
-        lines.append(f"| {rec['target']} | {rec['recommendation']} |")
+        lines.append(f"| {rec['target']} | {rec['recommendation']} | {rec['reason']} |")
 
     lines += [
         "",

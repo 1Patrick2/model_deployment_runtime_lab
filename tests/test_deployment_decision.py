@@ -147,6 +147,11 @@ class TestBuildDeploymentDecision:
         report = build_deployment_decision(config)
         # Should not crash and should still produce recommendations
         assert len(report["recommendations"]) == 3
+        # Missing evidence should be recorded
+        assert "INT8 benchmark" in report["missing_evidence"]
+        assert "Quant comparison" in report["missing_evidence"]
+        assert "RKNN conversion" in report["missing_evidence"]
+        assert "HTTP benchmark" in report["missing_evidence"]
 
 
 class TestDeploymentDecisionOutput:
