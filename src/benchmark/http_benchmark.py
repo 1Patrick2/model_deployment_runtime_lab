@@ -26,6 +26,19 @@ import yaml
 
 from src.benchmark.report import compute_stats, write_json_report, write_markdown_report
 
+__all__ = [
+    "send_infer_request",
+    "run_http_benchmark",
+    "make_health_endpoint",
+]
+
+
+def make_health_endpoint(infer_endpoint: str) -> str:
+    """Derive the health check URL from the infer endpoint."""
+    if infer_endpoint.endswith("/infer"):
+        return infer_endpoint[: -len("/infer")] + "/health"
+    return infer_endpoint.rstrip("/") + "/health"
+
 
 def send_infer_request(
     endpoint: str,
@@ -167,10 +180,9 @@ def main() -> None:
     print()
 
     # Quick health check
+    health_endpoint = make_health_endpoint(endpoint)
     try:
-        health_resp = urllib.request.urlopen(
-            endpoint.replace("/infer", "/health"), timeout=5
-        )
+        health_resp = urllib.request.urlopen(health_endpoint, timeout=5)
         assert health_resp.status == 200
         print("  health check: OK")
     except Exception as exc:

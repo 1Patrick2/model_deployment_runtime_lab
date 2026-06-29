@@ -137,7 +137,7 @@ python -m src.server.zmq_client --input samples/images/danger_scene.jpg
 
 ## Current Status
 
-**Stage 5.1 — Real Image HTTP Inference Server (in progress).**
+**Stage 5.2 — HTTP Inference Benchmark (in progress).**
 
 | Stage | What | Verified |
 |-------|------|----------|

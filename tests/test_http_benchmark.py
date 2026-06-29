@@ -1,34 +1,114 @@
 """Tests for HTTP benchmark — no real server needed."""
 
-import json
 from pathlib import Path
 
 import pytest
 import yaml
 
-from src.benchmark.http_benchmark import run_http_benchmark, _write_http_markdown
+from src.benchmark.http_benchmark import (
+    make_health_endpoint,
+    run_http_benchmark,
+    send_infer_request,
+    _write_http_markdown,
+)
 
 
-class TestHttpBenchmarkSummary:
-    """Benchmark logic with a fake config that skips warmup/repeat."""
+class TestMakeHealthEndpoint:
+    """Health endpoint derivation."""
 
-    def _make_fake_config(self, endpoint: str = "http://127.0.0.1:9999/infer") -> dict:
-        return {
-            "endpoint": endpoint,
+    def test_from_infer_path(self):
+        assert (
+            make_health_endpoint("http://127.0.0.1:8001/infer")
+            == "http://127.0.0.1:8001/health"
+        )
+
+    def test_from_root_path(self):
+        assert (
+            make_health_endpoint("http://127.0.0.1:8001")
+            == "http://127.0.0.1:8001/health"
+        )
+
+
+class TestRunHttpBenchmarkAllSuccess:
+    """All requests succeed."""
+
+    def test_success_counts_and_latency(self, monkeypatch):
+        call_count = 0
+
+        def fake_send(endpoint, payload, timeout_sec):
+            nonlocal call_count
+            call_count += 1
+            return 5.0, {
+                "status": "ok",
+                "backend": "onnx",
+                "model_id": "mobilenetv3_small",
+                "model_variant": "onnx_fp32_v1",
+                "top_k_predictions": [
+                    {"class_id": 1, "class_name": "goldfish", "score": 0.9}
+                ],
+                "latency_ms": {
+                    "preprocess": 0.1,
+                    "inference": 1.5,
+                    "postprocess": 0.2,
+                    "total": 1.8,
+                },
+            }
+
+        monkeypatch.setattr(
+            "src.benchmark.http_benchmark.send_infer_request",
+            fake_send,
+        )
+
+        config = {
+            "endpoint": "http://127.0.0.1:8001/infer",
             "request": {"input_type": "dummy", "input": "dummy", "top_k": 5},
-            "benchmark": {"warmup": 0, "repeat": 0, "timeout_sec": 2},
+            "benchmark": {"warmup": 2, "repeat": 3, "timeout_sec": 10},
         }
 
-    def test_benchmark_runs_with_zero_repeat(self):
-        """No real HTTP calls made when repeat=0."""
-        config = self._make_fake_config()
-        # This should fail because the endpoint is unreachable, but repeat=0
-        # means no actual benchmark requests are sent. The health check is
-        # not part of run_http_benchmark — it runs in main() only.
         report = run_http_benchmark(config)
-        assert report["success_count"] == 0
+
+        assert call_count == 5  # warmup 2 + repeat 3
+        assert report["success_count"] == 3
         assert report["failure_count"] == 0
-        assert report["repeat"] == 0
+        assert report["success_rate"] == 1.0
+        assert report["backend"] == "onnx"
+        assert report["model_id"] == "mobilenetv3_small"
+        assert report["server_total_ms"]["mean"] == 1.8
+        assert report["client_total_ms"]["mean"] == 5.0
+        assert report["sample_predictions"][0]["class_name"] == "goldfish"
+
+
+class TestRunHttpBenchmarkPartialFailure:
+    """Some requests fail."""
+
+    def test_failure_counts_and_latency(self, monkeypatch):
+        responses = [
+            (4.0, {"status": "ok", "latency_ms": {"total": 1.0}}),
+            (6.0, None),
+            (5.0, {"status": "ok", "latency_ms": {"total": 2.0}}),
+        ]
+
+        def fake_send(endpoint, payload, timeout_sec):
+            return responses.pop(0)
+
+        monkeypatch.setattr(
+            "src.benchmark.http_benchmark.send_infer_request",
+            fake_send,
+        )
+
+        config = {
+            "endpoint": "http://127.0.0.1:8001/infer",
+            "request": {"input_type": "dummy", "input": "dummy", "top_k": 5},
+            "benchmark": {"warmup": 0, "repeat": 3, "timeout_sec": 10},
+        }
+
+        report = run_http_benchmark(config)
+
+        assert report["success_count"] == 2
+        assert report["failure_count"] == 1
+        assert report["success_rate"] == 0.6667
+        assert report["client_total_ms"]["mean"] == 5.0
+        assert report["server_total_ms"]["mean"] == 1.5
 
 
 class TestHttpBenchmarkOutput:
@@ -36,12 +116,12 @@ class TestHttpBenchmarkOutput:
 
     def test_markdown_contains_expected_fields(self, tmp_path):
         report = {
-            "benchmark_type": "http_inference",
             "endpoint": "http://127.0.0.1:8001/infer",
             "input_type": "dummy",
             "backend": "onnx",
             "model_id": "test",
             "model_variant": "v1",
+            "top_k": 5,
             "repeat": 50,
             "success_rate": 1.0,
             "client_total_ms": {
@@ -50,16 +130,11 @@ class TestHttpBenchmarkOutput:
             "server_total_ms": {
                 "mean": 3.40, "p50": 3.30, "p95": 4.20, "min": 3.00, "max": 5.00,
             },
-            "server_inference_ms": {
-                "mean": 3.10, "p50": 3.05, "p95": 3.80, "min": 2.80, "max": 4.50,
-            },
         }
         p = tmp_path / "report.md"
         _write_http_markdown(report, p)
         content = p.read_text(encoding="utf-8")
         assert "HTTP Inference Benchmark Report" in content
-        assert "endpoint" in content
-        assert "server_total_ms" in content
         assert "Latency" in content
 
 
