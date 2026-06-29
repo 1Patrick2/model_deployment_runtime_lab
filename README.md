@@ -130,7 +130,7 @@ conda activate mdrl-runtime
 python verify_paths.py
 
 # Run tests (clean checkout: 111 passed, 10 skipped)
-# With local ONNX + QDQ INT8 artifacts: 121 passed, 0 skipped)
+# With local ONNX + QDQ INT8 artifacts: 121 passed, 0 skipped
 python -m pytest tests -q
 
 # Start fake inference server (Terminal 1)

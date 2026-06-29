@@ -28,13 +28,11 @@ PyTorch / torchvision model export to ONNX
 | Python | 3.13.13 |
 | Test result (clean checkout) | 111 passed, 10 skipped |
 | Test result (full smoke, generated artifacts) | 121 passed, 0 skipped |
+| ONNX FP32 artifact | 9.92 MB (generated locally, incl. external data) |
 | QDQ INT8 artifact | 2.70 MB (generated locally) |
 | RKNN artifact | 5.48 MB (generated in WSL) |
 
 > The 10 skipped tests are artifact-dependent smoke tests (ONNX checker, ORT session) that require locally generated ONNX files. They are not failures.
-| ONNX FP32 artifact | generated locally (9.92 MB incl. external data) |
-| QDQ INT8 artifact | generated locally (2.70 MB) |
-| RKNN artifact | generated in WSL (5.48 MB) |
 
 ## Key Commands
 
