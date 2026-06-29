@@ -73,6 +73,21 @@ class TestBuildAdvisorReport:
         content = build_advisor_report({})
         assert len(content) > 0
 
+    def test_next_steps_use_consecutive_numbers(self):
+        report = _make_decision()
+        content = build_advisor_report(report)
+        assert "1. Run INT8 calibration" in content
+        assert "2. Run RKNN Lite2" in content
+
+    def test_missing_evidence_appears_in_report(self):
+        report = _make_decision()
+        report["missing_evidence"] = ["HTTP benchmark", "RKNN conversion"]
+        content = build_advisor_report(report)
+        assert "Missing Evidence" in content
+        assert "HTTP benchmark" in content
+        assert "RKNN conversion" in content
+        assert "confidence is limited" in content
+
 
 class TestAdvisorOutput:
     """Markdown output."""

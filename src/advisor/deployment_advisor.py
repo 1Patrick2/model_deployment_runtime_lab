@@ -118,7 +118,26 @@ def _explain_risks(risks: list) -> List[str]:
 def _explain_next_steps(next_validation: list) -> List[str]:
     if not next_validation:
         return []
-    return [""] + ["## Next Steps"] + [f"1. {ns}" for ns in next_validation]
+    result: list[str] = ["", "## Next Steps"]
+    for i, ns in enumerate(next_validation, start=1):
+        result.append(f"{i}. {ns}")
+    return result
+
+
+def _explain_missing_evidence(missing_evidence: list) -> List[str]:
+    if not missing_evidence:
+        return []
+    lines: list[str] = [
+        "",
+        "## Missing Evidence",
+        "",
+        "Some evidence is missing, so recommendation confidence is limited.",
+        "",
+    ]
+    for me in missing_evidence:
+        lines.append(f"- {me}")
+    lines.append("")
+    return lines
 
 
 def build_advisor_report(decision_report: Dict[str, Any]) -> str:
@@ -127,6 +146,7 @@ def build_advisor_report(decision_report: Dict[str, Any]) -> str:
     recommendations = decision_report.get("recommendations", [])
     risks = decision_report.get("risks", [])
     next_val = decision_report.get("next_validation", [])
+    missing_evidence = decision_report.get("missing_evidence", [])
 
     lines: list[str] = [
         "# Deployment Advisor",
@@ -141,6 +161,7 @@ def build_advisor_report(decision_report: Dict[str, Any]) -> str:
     lines.append("")
     lines += _explain_rk3588(summary, recommendations)
     lines += _explain_risks(risks)
+    lines += _explain_missing_evidence(missing_evidence)
     lines += _explain_next_steps(next_val)
     lines.append("")
 
