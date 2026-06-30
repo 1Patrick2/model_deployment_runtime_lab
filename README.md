@@ -60,7 +60,9 @@ Model Zoo (MobileNetV3 / ResNet18)
 | 5.2 | ✅ Complete | HTTP inference benchmark |
 | 5.3 | ✅ Complete | Deployment decision report |
 | 5.4 | ✅ Complete | Rule-based deployment advisor |
-| 5.5 | **Current** | Final documentation |
+| 5.5 | ✅ Complete | Final documentation |
+| 6A | ✅ Complete | Real image calibration, INT8 consistency validation, experiment registry |
+| 6B | ✅ Complete | TensorRT backend benchmark (NVIDIA T400, ~3-4x speedup) |
 
 ## Stage 1 — Fake Runtime + ZMQ Protocol
 
@@ -142,7 +144,7 @@ python -m src.server.zmq_client --input samples/images/danger_scene.jpg
 
 ## Current Status
 
-**Stage 5.5 — Final Documentation (in progress).**
+**All stages complete.** Project has moved from ONNX serving skeleton to a full model deployment validation framework.
 
 | Stage | What | Verified |
 |-------|------|----------|
@@ -151,8 +153,8 @@ python -m src.server.zmq_client --input samples/images/danger_scene.jpg
 | 5.1 | Real image HTTP inference server | `/infer` dummy + image_path ok |
 | 5.2 | HTTP inference benchmark | 100% success rate, client/server latency breakdown |
 | 5.3 | Deployment decision report | Aggregates all reports into deploy/no-deploy recommendations |
-| 5.4 | Deployment advisor | Rule-based explainer for deployment decisions |
-| 5.5 | **Final documentation** | Stage 5 summary, reproduction guide |
+| 6A | Real image calibration, INT8 quantization validation, experiment registry | MobileNetV3 static QDQ rejected, dynamic linear-only recommended as size baseline |
+| 6B | **TensorRT backend benchmark** | Real NVIDIA T400: MobileNetV3 1028 qps (0.97ms), ResNet18 241 qps (4.15ms) |
 
 ### Quantization Notes
 
@@ -167,6 +169,25 @@ python -m src.server.zmq_client --input samples/images/danger_scene.jpg
 | Windows | `mdrl-dev` | Lightweight dev environment for independent pytest / lint |
 | Windows | `mdrl-train` | Optional: PyTorch / torchvision export (CPU/CUDA, install manually) |
 | WSL | `rknn-env` | **Only** RKNN Toolkit2 conversion — no pytest, no ZMQ, no ONNX Runtime |
+
+### TensorRT Backend (GPU)
+
+Optional GPU-accelerated inference via TensorRT:
+
+```powershell
+# Requires NVIDIA GPU + TensorRT installed
+python -m src.tensorrt.build_engine --config configs/tensorrt/mobilenetv3_small_default.yaml --benchmark
+python -m src.tensorrt.build_engine --config configs/tensorrt/resnet18_default.yaml --benchmark
+```
+
+Verified on NVIDIA T400, TensorRT 11.1.0:
+
+| Model | Throughput | Mean Latency | Speedup vs CPU |
+|-------|:---------:|:-----------:|:-------------:|
+| MobileNetV3-small | **1028 qps** | **0.97 ms** | ~3.1x |
+| ResNet18 | **241 qps** | **4.15 ms** | ~3.6x |
+
+TensorRT is optional — CPU-only systems get a "skipped" report. See [docs/tensorrt_backend.md](docs/tensorrt_backend.md).
 
 ### Real Image HTTP Server
 

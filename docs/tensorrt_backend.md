@@ -1,12 +1,12 @@
-# TensorRT FP16 Backend
+# TensorRT Backend
 
 ## Stage 6B Objective
 
-TensorRT FP16 is an optional GPU-accelerated backend for faster inference.
-This stage provides:
+TensorRT is an optional GPU-accelerated backend for faster inference.
+This module provides:
 
 - **Environment detection** — check for `trtexec` and GPU availability
-- **Engine build** — ONNX → TensorRT FP16 engine via `trtexec`
+- **Engine build** — ONNX → TensorRT engine via `trtexec`
 - **Benchmark** — `trtexec` latency / throughput measurement
 - **Report** — structured JSON and Markdown reports
 
@@ -14,35 +14,41 @@ This stage provides:
 
 - NVIDIA GPU with TensorRT 8.x+ installed
 - `trtexec` in PATH (comes with TensorRT)
-- ONNX FP32 models exported (see `configs/export/`)
+- ONNX FP32 models exported
 
-CPU-only users can still run all other stages (6A). TensorRT tests are safe
-on CPU-only systems and will produce "skipped" reports.
+CPU-only users can still run all other stages (6A). TensorRT tests and dry-run
+are safe on CPU-only systems and will produce "skipped" reports.
+
+## Precision
+
+- `precision: default` — no explicit precision flag (TensorRT's default strongly-typed path).
+  Recommended for TensorRT 11.x environments where `--fp16` may not be available.
+- `precision: fp16` — adds `--fp16` flag (not all `trtexec` versions support this).
 
 ## Usage
 
-### Build TensorRT FP16 engine
+### Build TensorRT engine
 
 ```powershell
-python -m src.tensorrt.build_engine --config configs/tensorrt/mobilenetv3_small_fp16.yaml
+python -m src.tensorrt.build_engine --config configs/tensorrt/mobilenetv3_small_default.yaml
 ```
 
 ### Dry-run (print command without executing)
 
 ```powershell
-python -m src.tensorrt.build_engine --config configs/tensorrt/mobilenetv3_small_fp16.yaml --dry-run
+python -m src.tensorrt.build_engine --config configs/tensorrt/mobilenetv3_small_default.yaml --dry-run
 ```
 
 ### Build + benchmark
 
 ```powershell
-python -m src.tensorrt.build_engine --config configs/tensorrt/mobilenetv3_small_fp16.yaml --benchmark
+python -m src.tensorrt.build_engine --config configs/tensorrt/mobilenetv3_small_default.yaml --benchmark
 ```
 
 ### ResNet18
 
 ```powershell
-python -m src.tensorrt.build_engine --config configs/tensorrt/resnet18_fp16.yaml --benchmark
+python -m src.tensorrt.build_engine --config configs/tensorrt/resnet18_default.yaml --benchmark
 ```
 
 ## Report
@@ -57,25 +63,34 @@ Output files:
 Key metrics:
 
 - **Throughput (qps)**: inferences per second
-- **Mean / median / min / max latency (ms)** 
-- **GPU Compute Time (ms)**
-- **H2D / D2H latency (ms)**
-- **Engine size (MB)**
+- **Mean / median / min / max latency** (ms)
+- **GPU Compute Time** (ms)
+- **H2D / D2H latency** (ms)
+- **Engine size** (MB)
 
 ## CPU-Only Behavior
 
 On systems without TensorRT:
 
 ```powershell
-python -m src.tensorrt.build_engine --config configs/tensorrt/mobilenetv3_small_fp16.yaml
+python -m src.tensorrt.build_engine --config configs/tensorrt/mobilenetv3_small_default.yaml
 ```
 → Produces a report with `build_status: "skipped"` and explanation.
 
-All TensorRT tests are safe on CPU-only systems (monkeypatched/mocked).
+## Verified Results
+
+Real benchmark completed on NVIDIA T400 4GB with TensorRT 11.1.0:
+
+| Model | Throughput | Mean Latency | Speedup vs ONNX CPU |
+|-------|:---------:|:-----------:|:-----------------:|
+| MobileNetV3-small | 1028 qps | 0.97 ms | ~3.1x |
+| ResNet18 | 241 qps | 4.15 ms | ~3.6x |
+
+See `docs/results/stage6b_tensorrt_summary.md` for full results.
 
 ## Limitations
 
-- Only FP16 precision is implemented (no TensorRT INT8).
+- Default precision uses TensorRT's strongly-typed path (not explicit FP16/INT8).
 - Input shapes are fixed (`1x3x224x224`); dynamic shapes not supported.
-- Requires NVIDIA GPU with TensorRT installed.
-- `trtexec` is used as the benchmark tool; Python TensorRT API is not used directly.
+- Requires NVIDIA GPU.
+- Python TensorRT API is not used directly — `trtexec` CLI is the benchmark tool.

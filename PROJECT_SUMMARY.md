@@ -1,13 +1,11 @@
 # Model Deployment Runtime Lab — Project Summary
 
-## Current Status (Stage 5.1)
+## Current Status (Stage 6B)
 
-**Real Image HTTP Inference Server — in progress.**
-
-The project has evolved from a YOLO vision pipeline into a full **model deployment runtime lab**:
+**All stages complete.** Project has evolved from a YOLO vision pipeline into a full **model deployment runtime lab**:
 
 A lightweight experimental framework for model deployment, ONNX runtime, quantization,
-ZMQ/HTTP inference serving, benchmark, RKNN conversion, and deployment reporting.
+ZMQ/HTTP inference serving, benchmark, RKNN conversion, deployment reporting, and TensorRT GPU benchmark.
 
 ---
 
@@ -28,8 +26,10 @@ ZMQ/HTTP inference serving, benchmark, RKNN conversion, and deployment reporting
 | 5.1 | Real image HTTP inference server (FastAPI) |
 | 5.2 | HTTP inference benchmark |
 | 5.3 | Deployment decision report |
-| 5.4 | Complete | Rule-based deployment advisor |
-| 5.5 | **Current** — Final documentation |
+| 5.4 | Rule-based deployment advisor |
+| 5.5 | Final documentation |
+| 6A | Real image calibration, INT8 consistency validation, experiment registry |
+| 6B | TensorRT backend benchmark (NVIDIA T400, ~3-4x speedup) |
 
 ---
 
@@ -108,6 +108,7 @@ ZMQ/HTTP inference serving, benchmark, RKNN conversion, and deployment reporting
 | Image preprocessing | `src/runtime/image_preprocess.py` |
 | Classification post-process | `src/runtime/classification_postprocess.py` |
 | ImageNet labels | `src/models/imagenet_labels.py` |
+| TensorRT backend | `src/tensorrt/build_engine.py`, `src/tensorrt/env.py` |
 
 ---
 
@@ -148,9 +149,12 @@ python -m pytest tests -q
 - MobileNetV3-small → RK3588 conversion successful
 - Output: `outputs/rknn/mobilenetv3_small_fp32.rknn` (5.48 MB)
 
----
+**TensorRT benchmark (real NVIDIA T400):**
+- TensorRT 11.1.0, CUDA 12.4, Driver 552.12
+- MobileNetV3-small default: 1028 qps, 0.97 ms mean latency, 10.92 MB engine
+- ResNet18 default: 241 qps, 4.15 ms mean latency, 58.76 MB engine
+- Precision: default / strongly typed (not FP16)
 
 ## Next
 
-Stage 5.5 → Final documentation and reproduction guide
 Stage 6 → RK3588 board validation (when hardware is available)
