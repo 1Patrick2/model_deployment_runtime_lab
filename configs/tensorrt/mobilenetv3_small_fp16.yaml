@@ -1,0 +1,17 @@
+# TensorRT FP16 build and benchmark config
+
+model_id: mobilenetv3_small
+onnx_model: outputs/onnx/mobilenetv3_small_imagenet_fp32.onnx
+engine_output: outputs/tensorrt/mobilenetv3_small_fp16.engine
+
+precision: fp16
+input_name: input
+input_shape: [1, 3, 224, 224]
+
+trtexec:
+  warmup: 200
+  iterations: 1000
+  workspace_mb: 2048
+
+report_json: outputs/reports/tensorrt_mobilenetv3_small_fp16.json
+report_md: outputs/reports/tensorrt_mobilenetv3_small_fp16.md

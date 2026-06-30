@@ -1,0 +1,17 @@
+# TensorRT FP16 build and benchmark config
+
+model_id: resnet18
+onnx_model: outputs/onnx/resnet18_imagenet_fp32.onnx
+engine_output: outputs/tensorrt/resnet18_fp16.engine
+
+precision: fp16
+input_name: input
+input_shape: [1, 3, 224, 224]
+
+trtexec:
+  warmup: 200
+  iterations: 1000
+  workspace_mb: 2048
+
+report_json: outputs/reports/tensorrt_resnet18_fp16.json
+report_md: outputs/reports/tensorrt_resnet18_fp16.md
