@@ -47,6 +47,13 @@ def write_tensorrt_markdown(report: Dict[str, Any], path: str | Path) -> Path:
         f"| engine_size_mb | {_safe(report.get('engine_size_mb'))} |",
     ]
 
+    build_cmd = report.get("build_command")
+    if build_cmd:
+        lines += ["", "### Build Command", "", "```", _safe(" ".join(build_cmd)), "```"]
+
+    if report.get("build_error"):
+        lines += ["", f"**Build Error:** {_safe(report['build_error'])}"]
+
     lines += [
         "",
         "## Benchmark",
@@ -66,12 +73,21 @@ def write_tensorrt_markdown(report: Dict[str, Any], path: str | Path) -> Path:
     if not metrics:
         lines.append(f"| Status | {_safe(report.get('benchmark_status', 'not run'))} |")
 
-    if report.get("build_status") == "skipped":
+    bench_cmd = report.get("benchmark_command")
+    if bench_cmd:
+        lines += ["", "### Benchmark Command", "", "```", _safe(" ".join(bench_cmd)), "```"]
+
+    if report.get("benchmark_error"):
+        lines += ["", f"**Benchmark Error:** {_safe(report['benchmark_error'])}"]
+
+    if report.get("reason"):
+        lines += ["", "## Notes", "", f"- {_safe(report['reason'])}"]
+    elif report.get("build_status") == "skipped":
         lines += [
             "",
             "## Notes",
             "",
-            f"- TensorRT benchmark was skipped: {report.get('reason', 'not available')}",
+            "- TensorRT benchmark was skipped.",
             "- This is expected on CPU-only systems.",
             "- To run TensorRT benchmarks, install TensorRT and ensure trtexec is in PATH.",
         ]

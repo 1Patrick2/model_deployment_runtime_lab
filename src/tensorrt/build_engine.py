@@ -32,6 +32,7 @@ def _build_command(config: dict) -> List[str]:
     inp = config.get("input_name", "input")
     shape = config.get("input_shape", [1, 3, 224, 224])
     shape_str = f"{inp}:{'x'.join(str(d) for d in shape)}"
+    trt = config.get("trtexec", {})
 
     cmd = [
         "trtexec",
@@ -40,6 +41,12 @@ def _build_command(config: dict) -> List[str]:
         f"--{precision}",
         f"--shapes={shape_str}",
     ]
+    workspace = trt.get("workspace_mb")
+    if workspace:
+        cmd.append(f"--memPoolSize=workspace:{workspace}")
+    extra = trt.get("extra_args")
+    if extra:
+        cmd.extend(extra)
     return cmd
 
 
@@ -126,6 +133,17 @@ def run_benchmark(config: dict, dry_run: bool = False) -> dict:
 
     Returns a structured report dict with metrics.
     """
+    if dry_run:
+        cmd = _benchmark_command(config)
+        return {
+            "model_id": config.get("model_id", ""),
+            "backend": "tensorrt",
+            "precision": config.get("precision", "fp16"),
+            "benchmark_status": "dry_run",
+            "benchmark_command": cmd,
+            "benchmark_output": " ".join(cmd),
+        }
+
     engine_path = Path(config["engine_output"])
     if not engine_path.exists():
         return {
@@ -197,7 +215,7 @@ def main() -> None:
 
     # Build
     build_report = run_build(config, dry_run=args.dry_run)
-    if args.benchmark and build_report.get("build_status") == "ok":
+    if args.benchmark and (build_report.get("build_status") in ("ok", "dry_run") or args.dry_run):
         bench_report = run_benchmark(config, dry_run=args.dry_run)
         build_report.update(bench_report)
 

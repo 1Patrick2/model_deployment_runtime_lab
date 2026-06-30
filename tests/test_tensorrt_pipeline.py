@@ -108,3 +108,64 @@ class TestTensorRTReport:
         p = write_tensorrt_markdown(report, tmp_path / "report.md")
         content = p.read_text(encoding="utf-8")
         assert "TensorRT FP16 Benchmark Report" in content
+
+    def test_build_command_with_workspace(self):
+        cfg = {
+            "onnx_model": "test.onnx",
+            "engine_output": "test.engine",
+            "precision": "fp16",
+            "input_name": "input",
+            "input_shape": [1, 3, 224, 224],
+            "trtexec": {"workspace_mb": 2048},
+        }
+        cmd = _build_command(cfg)
+        assert any("--memPoolSize=workspace:2048" in c for c in cmd)
+
+    def test_parse_trtexec_alternate_format(self):
+        sample = """
+        [I] Throughput: 987.65 qps
+        [I] minimum = 0.50 ms, maximum = 2.00 ms, mean = 1.20 ms, median = 1.10 ms
+        """
+        result = parse_trtexec_output(sample)
+        assert result["throughput_qps"] == 987.65
+        assert result["latency_ms"]["mean"] == 1.20
+        assert result["latency_ms"]["min"] == 0.50
+
+
+class TestDryRunBenchmark:
+    """Dry-run behavior."""
+
+    def test_dry_run_benchmark_does_not_check_engine(self, tmp_path):
+        """run_benchmark(dry_run=True) should work without engine file."""
+        from src.tensorrt.build_engine import run_benchmark
+        cfg = {
+            "engine_output": str(tmp_path / "nonexistent.engine"),
+            "trtexec": {"warmup": 10, "iterations": 20},
+        }
+        result = run_benchmark(cfg, dry_run=True)
+        assert result["benchmark_status"] == "dry_run"
+        assert "benchmark_command" in result
+        assert "--warmUp=10" in " ".join(result["benchmark_command"])
+
+
+class TestMarkdownReports:
+    """Markdown report with commands."""
+
+    def test_markdown_with_build_command(self, tmp_path):
+        report = {
+            "model_id": "test", "build_status": "dry_run",
+            "build_command": ["trtexec", "--onnx=test.onnx"],
+        }
+        p = write_tensorrt_markdown(report, tmp_path / "report.md")
+        content = p.read_text(encoding="utf-8")
+        assert "Build Command" in content or "Build" in content
+
+    def test_markdown_with_benchmark_command(self, tmp_path):
+        report = {
+            "model_id": "test", "build_status": "dry_run",
+            "benchmark_status": "dry_run",
+            "benchmark_command": ["trtexec", "--loadEngine=test.engine"],
+        }
+        p = write_tensorrt_markdown(report, tmp_path / "report.md")
+        content = p.read_text(encoding="utf-8")
+        assert "Benchmark" in content

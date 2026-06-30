@@ -25,19 +25,27 @@ def parse_trtexec_output(text: str) -> Dict[str, Any]:
     """
     result: Dict[str, Any] = {}
 
-    # Throughput (QPS)
-    qps = _extract_float(text, r"Throughput.*?(\d+\.?\d*)\s*(?:qps|QPS)")
-    if qps is not None:
-        result["throughput_qps"] = qps
+    # Throughput (QPS) — multiple formats
+    patterns = [
+        r"Throughput.*?(\d+\.?\d*)\s*(?:qps|QPS|infer/s)",
+        r"\[I\](\s+)Throughput.*?(\d+\.?\d*)",
+        r"throughput.*?(\d+\.?\d*)",
+    ]
+    for pat in patterns:
+        qps = _extract_float(text, pat)
+        if qps is not None:
+            result["throughput_qps"] = qps
+            break
 
-    # Latency
+    # Latency — support many formats
     latency: Dict[str, Optional[float]] = {}
-    for key, pat in [
-        ("min", r"minimum.*?(\d+\.?\d*)\s*ms"),
-        ("max", r"maximum.*?(\d+\.?\d*)\s*ms"),
-        ("mean", r"(?:mean|average).*?(\d+\.?\d*)\s*ms"),
-        ("median", r"median.*?(\d+\.?\d*)\s*ms"),
-    ]:
+    latency_pats = [
+        ("min", r"(?:min(?:imum)?|minimum)\s*[:=]?\s*(\d+\.?\d*)\s*ms"),
+        ("max", r"(?:max(?:imum)?|maximum)\s*[:=]?\s*(\d+\.?\d*)\s*ms"),
+        ("mean", r"(?:mean|average|avg)\s*[:=]?\s*(\d+\.?\d*)\s*ms"),
+        ("median", r"(?:median|med)\s*[:=]?\s*(\d+\.?\d*)\s*ms"),
+    ]
+    for key, pat in latency_pats:
         v = _extract_float(text, pat)
         if v is not None:
             latency[key] = v
