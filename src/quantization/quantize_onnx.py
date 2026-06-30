@@ -93,15 +93,37 @@ def _clear_value_info(graph) -> None:
 # ── Quantisation runners ────────────────────────────────────────
 
 
-def _run_dynamic(inp: Path, out: Path) -> None:
-    """Dynamic quantization (may produce unsupported ConvInteger ops)."""
+def _run_dynamic(inp: Path, out: Path, config: Dict[str, Any] | None = None) -> dict:
+    """Dynamic quantization (may produce unsupported ConvInteger ops).
+
+    Supports ``op_types_to_quantize`` in config to limit which operator
+    types are quantized (e.g. ``["MatMul", "Gemm"]`` for linear-only).
+    """
+    if config is None:
+        config = {}
+
     model = onnx.load(str(inp))
     inferred = _relaxed_shape_infer(model)
-    quantize_dynamic(
-        model_input=inferred,
-        model_output=str(out),
-        weight_type=QuantType.QInt8,
-    )
+
+    import tempfile
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        tmp = Path(tmpdir) / "inferred.onnx"
+        onnx.save(inferred, str(tmp))
+
+        op_types = config.get("op_types_to_quantize")
+        kw: dict = {"weight_type": QuantType.QInt8}
+        if op_types:
+            kw["op_types_to_quantize"] = op_types
+
+        quantize_dynamic(model_input=str(tmp), model_output=str(out), **kw)
+
+    return {
+        "method": "dynamic",
+        "op_types_to_quantize": op_types or "default",
+        "weight_type": "QInt8",
+        "artifact_size_mb": round(out.stat().st_size / (1024 * 1024), 2),
+    }
 
 
 def _run_static_qdq(inp: Path, out: Path, config: Dict[str, Any]) -> None:
@@ -328,24 +350,30 @@ def run_quantization(
     print(f"  input:  {inp.resolve()}")
     print(f"  output: {out.resolve()}")
 
+    meta: dict | None = None
+
     if method == "static_qdq_real":
         cal_report = _run_static_qdq_real(inp, out, config)
         print(f"  calibration: {cal_report['calibration_type']}")
         print(f"  images: {cal_report['num_calibration_images']}")
+        meta = cal_report
     elif method == "static_qdq":
         _run_static_qdq(inp, out, config)
     else:
-        _run_dynamic(inp, out)
+        meta = _run_dynamic(inp, out, config)
 
     size_mb = out.stat().st_size / (1024 * 1024)
     print(f"Done.  Artifact size: {size_mb:.2f} MB")
 
-    # Write calibration report
-    if method == "static_qdq_real":
-        report_path = out.with_suffix(".calibration.json")
-        with open(report_path, "w", encoding="utf-8") as f:
-            json.dump({**cal_report, "artifact_size_mb": round(size_mb, 2)}, f, indent=2)
-        print(f"  calibration report: {report_path}")
+    # Write quantization metadata
+    meta_path = out.with_suffix(".quantization.json")
+    if meta is None:
+        meta = {"method": method, "artifact_size_mb": round(size_mb, 2)}
+    else:
+        meta["artifact_size_mb"] = round(size_mb, 2)
+    with open(meta_path, "w", encoding="utf-8") as f:
+        json.dump(meta, f, indent=2, ensure_ascii=False)
+    print(f"  metadata: {meta_path}")
 
     return out
 

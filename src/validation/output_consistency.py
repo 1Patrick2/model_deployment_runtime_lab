@@ -46,6 +46,25 @@ def load_onnx_session(
     )
 
 
+def _make_failure_report(fp32_path, int8_path, image_dir, failure_stage, exc) -> Dict[str, Any]:
+    """Generate a failure report when a model cannot be loaded."""
+    err_msg = str(exc)
+    err_type = type(exc).__name__
+    rec = "Use dynamic linear-only quantization or exclude Conv from dynamic quantization."
+    if "ConvInteger" in err_msg:
+        rec = "Use dynamic linear-only quantization (MatMul/Gemm only) to avoid ConvInteger."
+    return {
+        "status": "failed",
+        "failure_stage": failure_stage,
+        "error_type": err_type,
+        "error_message": err_msg,
+        "recommendation": rec,
+        "fp32_model": str(fp32_path),
+        "int8_model": str(int8_path),
+        "image_dir": str(image_dir),
+    }
+
+
 def run_validation(config: dict) -> Dict[str, Any]:
     """Run FP32 vs INT8 output consistency validation.
 
@@ -85,9 +104,16 @@ def run_validation(config: dict) -> Dict[str, Any]:
     if not image_paths:
         raise ValueError(f"No supported images found in {image_dir}")
 
-    # Load sessions
-    fp32_session = load_onnx_session(fp32_path)
-    int8_session = load_onnx_session(int8_path)
+    # Load sessions (with graceful failure)
+    try:
+        fp32_session = load_onnx_session(fp32_path)
+    except Exception as exc:
+        return _make_failure_report(fp32_path, int8_path, image_dir, "load_fp32_model", exc)
+
+    try:
+        int8_session = load_onnx_session(int8_path)
+    except Exception as exc:
+        return _make_failure_report(fp32_path, int8_path, image_dir, "load_int8_model", exc)
 
     fp32_input_name = fp32_session.get_inputs()[0].name
     int8_input_name = int8_session.get_inputs()[0].name
@@ -222,6 +248,24 @@ def write_validation_markdown(report: dict, path: str | Path) -> Path:
     p = Path(path)
     p.parent.mkdir(parents=True, exist_ok=True)
 
+    # Handle failure reports
+    if report.get("status") == "failed":
+        lines = [
+            "# Quantization Validation Report",
+            "",
+            "## Status: FAILED",
+            "",
+            f"| Field | Value |",
+            "|---|---|",
+            f"| failure_stage | {report.get('failure_stage', '')} |",
+            f"| error_type | {report.get('error_type', '')} |",
+            f"| error_message | {report.get('error_message', '')} |",
+            f"| recommendation | {report.get('recommendation', '')} |",
+            "",
+        ]
+        p.write_text("\n".join(lines) + "\n", encoding="utf-8")
+        return p
+
     lines = [
         "# Quantization Validation Report",
         "",
@@ -331,11 +375,18 @@ def main() -> None:
     print(f"  JSON: {out_json}")
     print(f"  MD:   {out_md}")
     print()
-    print(f"  top1_consistency:               {report.get('top1_consistency', 'N/A')}")
-    print(f"  top5_consistency:               {report.get('top5_consistency', 'N/A')}")
-    print(f"  mean_logits_cosine_similarity:  {report.get('mean_logits_cosine_similarity', 'N/A')}")
-    print(f"  mean_confidence_drift:          {report.get('mean_confidence_drift', 'N/A')}")
-    print(f"  size_reduction_percent:         {report.get('size_reduction_percent', 'N/A')}%")
+
+    if report.get("status") == "failed":
+        print(f"  status: FAILED")
+        print(f"  failure_stage: {report.get('failure_stage', 'N/A')}")
+        print(f"  error_type: {report.get('error_type', 'N/A')}")
+        print(f"  recommendation: {report.get('recommendation', 'N/A')}")
+    else:
+        print(f"  top1_consistency:               {report.get('top1_consistency', 'N/A')}")
+        print(f"  top5_consistency:               {report.get('top5_consistency', 'N/A')}")
+        print(f"  mean_logits_cosine_similarity:  {report.get('mean_logits_cosine_similarity', 'N/A')}")
+        print(f"  mean_confidence_drift:          {report.get('mean_confidence_drift', 'N/A')}")
+        print(f"  size_reduction_percent:         {report.get('size_reduction_percent', 'N/A')}%")
 
 
 if __name__ == "__main__":

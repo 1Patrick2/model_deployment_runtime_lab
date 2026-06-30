@@ -78,3 +78,18 @@ class TestQuantPreprocessFallback:
         from src.quantization.quantize_onnx import run_quantization
         with pytest.raises(Exception):
             run_quantization(str(dummy_onnx), str(tmp_path / "out.onnx"), config=config)
+
+class TestValidationFailureReport:
+    """Validation should produce failure reports instead of traceback."""
+
+    def test_failure_report_has_required_fields(self):
+        from src.validation.output_consistency import _make_failure_report
+        exc = RuntimeError("Could not find an implementation for ConvInteger")
+        report = _make_failure_report(
+            Path("fp32.onnx"), Path("int8.onnx"), Path("images"),
+            "load_int8_model", exc,
+        )
+        assert report["status"] == "failed"
+        assert report["failure_stage"] == "load_int8_model"
+        assert "ConvInteger" in report["error_message"]
+        assert "linear-only" in report["recommendation"]
