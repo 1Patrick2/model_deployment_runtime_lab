@@ -80,7 +80,17 @@ Output: `outputs/reports/quant_validation_*.json` + `.md`
 - Consistency validation does **not** replace labeled accuracy evaluation.
 - Full accuracy measurement requires ground-truth labels and a validation dataset like ImageNet val.
 
+## MobileNetV3-small Quantization Results (Verified)
+
+| Strategy | Top1 Consistency | Top5 Consistency | Cosine Similarity | Size Reduction | Status |
+|----------|:-:|:-:|:-:|:-:|:-:|
+| Static QDQ | 0.0 | 0.033 | 0.105 | 72% | ❌ Not recommended |
+| Preprocessed Static QDQ | 0.0 | 0.033 | 0.091 | 74% | ❌ Not recommended |
+| Dynamic linear-only | **0.967** | **1.0** | **0.9997** | 47% | ✅ Conservative baseline |
+
+**Conclusion:** MobileNetV3-small is not suitable for static activation QDQ PTQ under the current settings. The dynamic linear-only path (MatMul/Gemm only) provides a reliable conservative INT8 baseline but does not improve CPU latency.
+
 ## Next After This Stage
 
 - Stage 6A.4: Integrate quant validation results into deployment decision report and advisor.
-- Stage 6B: TensorRT FP16 engine build and benchmark (optional).
+- Stage 6B: TensorRT FP16 engine build and benchmark (optional, requires GPU).

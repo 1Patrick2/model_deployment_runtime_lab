@@ -1,0 +1,15 @@
+# FP32 vs preprocessed QDQ INT8 validation for ResNet18
+
+fp32_model: outputs/onnx/resnet18_imagenet_fp32.onnx
+int8_model: outputs/onnx/resnet18_imagenet_int8_qdq_preprocessed.onnx
+image_dir: samples/images/validation_real
+
+preprocessing:
+  mode: imagenet_v1
+  resize_shorter: 256
+  center_crop: [224, 224]
+  mean: [0.485, 0.456, 0.406]
+  std: [0.229, 0.224, 0.225]
+
+output_json: outputs/reports/quant_validation_resnet18_imagenet_fp32_vs_qdq_preprocessed.json
+output_md: outputs/reports/quant_validation_resnet18_imagenet_fp32_vs_qdq_preprocessed.md
