@@ -104,7 +104,10 @@ def run_experiment(exp: dict, models: dict, datasets: dict) -> Dict[str, Any]:
     except Exception as exc:
         return {"experiment_id": exp_id, "model_id": model_id,
                 "method": method, "status": "failed",
-                "error": f"quantization: {exc}"}
+                "failure_stage": "quantization",
+                "error_type": type(exc).__name__,
+                "error_message": str(exc),
+                "decision": "invalid_artifact"}
 
     # Run validation
     val_cfg = {
@@ -144,14 +147,49 @@ def write_summary_markdown(summary: dict, path: str | Path) -> Path:
     p = Path(path)
     p.parent.mkdir(parents=True, exist_ok=True)
 
-    lines = [
-        "# Quantisation Experiment Summary",
+    exps = summary.get("experiments", [])
+
+    # Build executive summary
+    exec_lines = ["# Quantisation Experiment Summary", ""]
+    for exp in exps:
+        eid = exp.get("experiment_id", "")
+        dec = exp.get("decision", "")
+        t1 = exp.get("top1_consistency", "")
+        sid = exp.get("experiment_id", "")
+        if exp.get("status") == "failed":
+            exec_lines.append(f"- **{sid}**: Failed — {exp.get('failure_stage', '')} error")
+            continue
+        if dec == "reject_consistency_failed":
+            exec_lines.append(
+                f"- **{sid}**: Rejected — output consistency failed (top1={t1})"
+            )
+        elif dec == "reject_distribution_shift":
+            exec_lines.append(
+                f"- **{sid}**: Rejected — distribution shift (cosine={exp.get('mean_logits_cosine_similarity', '')})"
+            )
+        elif dec == "recommended_candidate":
+            exec_lines.append(
+                f"- **{sid}**: Recommended — consistency passed with latency improvement"
+            )
+        elif dec == "size_optimized_baseline":
+            exec_lines.append(
+                f"- **{sid}**: Size baseline — consistency passed, but INT8 latency not faster than FP32"
+            )
+        elif dec == "insufficient_data":
+            exec_lines.append(
+                f"- **{sid}**: Cannot decide — insufficient metric data"
+            )
+
+    exec_lines.append("")
+
+    lines = exec_lines + [
+        "## Experiment Table",
         "",
         "| Experiment | Model | Method | Status | Top1 | Top5 | Cosine | Size↓ | Latency | Decision |",
-        "|---|---|---|---:|---:|---:|---:|---:|---:|",
+        "|---|---|---|---:|---:|---:|---:|---:|---:|---:|",
     ]
 
-    for exp in summary.get("experiments", []):
+    for exp in exps:
         sid = exp.get("experiment_id", "")
         model = exp.get("model_id", "")
         method = exp.get("method", "")
@@ -160,7 +198,6 @@ def write_summary_markdown(summary: dict, path: str | Path) -> Path:
         t5 = exp.get("top5_consistency", "")
         cos = exp.get("mean_logits_cosine_similarity", "")
         sr = exp.get("size_reduction_percent", "")
-        # Latency comparison
         fp32_lat = exp.get("fp32_mean_latency_ms")
         int8_lat = exp.get("int8_mean_latency_ms")
         if fp32_lat and int8_lat:
@@ -174,7 +211,16 @@ def write_summary_markdown(summary: dict, path: str | Path) -> Path:
             f"| {t1} | {t5} | {cos} | {sr}% | {lat} | {decision} |"
         )
 
-    lines.append("")
+    lines += [
+        "",
+        "## Notes",
+        "",
+        "- Top1/Top5/Cosine measure FP32-vs-INT8 output consistency, not classification accuracy.",
+        "- The validation set uses unlabeled real images as a smoke-test set.",
+        "- True accuracy requires labeled validation data.",
+        "",
+    ]
+
     p.write_text("\n".join(lines) + "\n", encoding="utf-8")
     return p
 
@@ -188,7 +234,18 @@ def main() -> None:
     )
     parser.add_argument("--experiment", help="Run a single experiment by ID")
     parser.add_argument("--all", action="store_true", help="Run all experiments")
+    parser.add_argument(
+        "--reuse-existing", action="store_true",
+        help="Skip quantization if output_model already exists; only run validation",
+    )
     args = parser.parse_args()
+
+    if not args.experiment and not args.all:
+        print("ERROR: specify --experiment <id> or --all", file=sys.stderr)
+        raise SystemExit(1)
+    if args.experiment and args.all:
+        print("ERROR: specify only one of --experiment or --all", file=sys.stderr)
+        raise SystemExit(1)
 
     config_path = Path(args.config)
     if not config_path.exists():
@@ -202,6 +259,13 @@ def main() -> None:
     models = config.get("models", {})
     datasets = config.get("datasets", {})
 
+    if not args.experiment and not args.all:
+        print("ERROR: specify --experiment <id> or --all", file=sys.stderr)
+        raise SystemExit(1)
+    if args.experiment and args.all:
+        print("ERROR: specify only one of --experiment or --all", file=sys.stderr)
+        raise SystemExit(1)
+
     if args.experiment:
         experiments = [e for e in experiments if e["id"] == args.experiment]
         if not experiments:
@@ -213,7 +277,29 @@ def main() -> None:
         print(f"\n{'='*60}")
         print(f"Experiment: {exp['id']}")
         print(f"{'='*60}")
-        result = run_experiment(exp, models, datasets)
+
+        output_model = Path(exp.get("output_model", ""))
+        skip_quant = args.reuse_existing and output_model.exists()
+
+        if skip_quant:
+            print(f"  quantization skipped (artifact exists)")
+            # Build validation config directly
+            model_cfg = models.get(exp["model"], {})
+            val_cfg = {
+                "fp32_model": model_cfg.get("fp32", ""),
+                "int8_model": str(output_model),
+                "image_dir": datasets.get("validation", {}).get(
+                    "image_dir", "samples/images/validation_real"
+                ),
+                "preprocessing": model_cfg.get("preprocessing", {}),
+            }
+            from src.validation.output_consistency import run_validation
+            result = run_validation(val_cfg)
+            result["experiment_id"] = exp["id"]
+            result["model_id"] = exp["model"]
+            result["method"] = exp.get("method", "")
+        else:
+            result = run_experiment(exp, models, datasets)
         results.append(result)
 
     summary = build_summary(results)
