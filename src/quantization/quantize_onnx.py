@@ -161,10 +161,30 @@ def _run_static_qdq_real(inp: Path, out: Path, config: Dict[str, Any]) -> dict:
         from onnxruntime.quantization.shape_inference import quant_pre_process
         import tempfile
 
+        # Materialize external-data ONNX into a single file if needed
+        external_data_materialized = False
+        materialized_path = inp
+        try:
+            materialized_dir = Path(tempfile.mkdtemp())
+            maybe_ext = inp.parent / f"{inp.stem}.onnx.data"
+            if maybe_ext.exists():
+                model_ext = onnx.load(str(inp), load_external_data=True)
+                single_path = materialized_dir / "single.onnx"
+                onnx.save_model(model_ext, str(single_path), save_as_external_data=False)
+                materialized_path = single_path
+                external_data_materialized = True
+        except Exception as mat_exc:
+            # If materialization fails, fall back to original path
+            preproc_error = f"materialization failed: {mat_exc}"
+            if materialized_dir.exists() and materialized_dir != Path(tempfile.gettempdir()):
+                import shutil
+                shutil.rmtree(materialized_dir, ignore_errors=True)
+
         # Determine model source: preprocessed or original
         with tempfile.TemporaryDirectory() as preproc_dir:
             preproc_path = Path(preproc_dir) / "preprocessed.onnx"
             success = False
+            preproc_try_error = None
 
             # Attempt 1: config-specified params
             try:
@@ -173,49 +193,51 @@ def _run_static_qdq_real(inp: Path, out: Path, config: Dict[str, Any]) -> dict:
                     kw["skip_symbolic_shape"] = True
                 if quant_cfg.get("skip_optimization"):
                     kw["skip_optimization"] = True
-                quant_pre_process(str(inp), str(preproc_path), **kw)
+                quant_pre_process(str(materialized_path), str(preproc_path), **kw)
                 success = True
                 preproc_status = "success"
+                preproc_try_error = None
                 skip_symbolic_shape_used = kw.get("skip_symbolic_shape", False)
                 skip_optimization_used = kw.get("skip_optimization", False)
             except Exception as exc:
-                preproc_error = str(exc)
+                preproc_try_error = str(exc)
 
             # Attempt 2: try skip_symbolic_shape=True
             if not success:
                 try:
-                    quant_pre_process(str(inp), str(preproc_path), skip_symbolic_shape=True)
+                    quant_pre_process(str(materialized_path), str(preproc_path), skip_symbolic_shape=True)
                     success = True
                     preproc_status = "success"
+                    preproc_try_error = None
                     skip_symbolic_shape_used = True
-                    preproc_error = None
                 except Exception as exc:
-                    preproc_error = str(exc)
+                    preproc_try_error = str(exc)
 
             # Attempt 3: try skip_symbolic_shape=True + skip_optimization=True
             if not success:
                 try:
                     quant_pre_process(
-                        str(inp), str(preproc_path),
+                        str(materialized_path), str(preproc_path),
                         skip_symbolic_shape=True, skip_optimization=True,
                     )
                     success = True
                     preproc_status = "success"
+                    preproc_try_error = None
                     skip_symbolic_shape_used = True
                     skip_optimization_used = True
-                    preproc_error = None
                 except Exception as exc:
-                    preproc_error = str(exc)
+                    preproc_try_error = str(exc)
 
             if success:
                 model = onnx.load(str(preproc_path))
             elif fallback_to_original:
                 model = onnx.load(str(inp))
                 preproc_status = "fallback"
+                preproc_error = preproc_error or preproc_try_error
             else:
                 raise RuntimeError(
                     f"ORT quant_pre_process failed after all attempts. "
-                    f"Last error: {preproc_error}"
+                    f"Last error: {preproc_try_error}"
                 )
     else:
         model = onnx.load(str(inp))
@@ -265,6 +287,7 @@ def _run_static_qdq_real(inp: Path, out: Path, config: Dict[str, Any]) -> dict:
         "preprocess_enabled": preprocess_enabled,
         "preprocess_status": preproc_status,
         "preprocess_error": preproc_error,
+        "external_data_materialized": external_data_materialized if preprocess_enabled else False,
         "skip_symbolic_shape": skip_symbolic_shape_used,
         "skip_optimization": skip_optimization_used,
         "num_calibration_images": min(max_samples, len(reader._image_paths)),
