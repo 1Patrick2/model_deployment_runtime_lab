@@ -1,0 +1,63 @@
+# Quantization experiment matrix — unified config
+# Replaces individual yaml files for cross-model / cross-strategy comparison.
+
+models:
+  mobilenetv3_small:
+    fp32: outputs/onnx/mobilenetv3_small_imagenet_fp32.onnx
+    input_shape: [1, 3, 224, 224]
+    preprocessing:
+      mode: imagenet_v1
+      resize_shorter: 256
+      center_crop: [224, 224]
+      mean: [0.485, 0.456, 0.406]
+      std: [0.229, 0.224, 0.225]
+
+  resnet18:
+    fp32: outputs/onnx/resnet18_imagenet_fp32.onnx
+    input_shape: [1, 3, 224, 224]
+    preprocessing:
+      mode: imagenet_v1
+      resize_shorter: 256
+      center_crop: [224, 224]
+      mean: [0.485, 0.456, 0.406]
+      std: [0.229, 0.224, 0.225]
+
+datasets:
+  calibration:
+    image_dir: samples/images/calibration_real
+    max_samples: 50
+  validation:
+    image_dir: samples/images/validation_real
+
+experiments:
+  - id: mobilenetv3_static_qdq
+    model: mobilenetv3_small
+    method: static_qdq_real
+    output_model: outputs/onnx/mobilenetv3_small_imagenet_int8_qdq_real.onnx
+
+  - id: mobilenetv3_static_qdq_preprocessed
+    model: mobilenetv3_small
+    method: static_qdq_real
+    preprocess: true
+    skip_symbolic_shape: true
+    fallback_to_original: true
+    output_model: outputs/onnx/mobilenetv3_small_imagenet_int8_qdq_preprocessed.onnx
+
+  - id: mobilenetv3_dynamic_linear_only
+    model: mobilenetv3_small
+    method: dynamic
+    op_types_to_quantize: ["MatMul", "Gemm"]
+    output_model: outputs/onnx/mobilenetv3_small_imagenet_int8_dynamic.onnx
+
+  - id: resnet18_static_qdq
+    model: resnet18
+    method: static_qdq_real
+    output_model: outputs/onnx/resnet18_imagenet_int8_qdq_real.onnx
+
+  - id: resnet18_static_qdq_preprocessed
+    model: resnet18
+    method: static_qdq_real
+    preprocess: true
+    skip_symbolic_shape: true
+    fallback_to_original: true
+    output_model: outputs/onnx/resnet18_imagenet_int8_qdq_preprocessed.onnx
