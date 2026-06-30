@@ -57,14 +57,14 @@ ZMQ/HTTP inference serving, benchmark, RKNN conversion, deployment reporting, an
                                      │
                           ┌──────────▼───────────┐
                           │   Runtime Backends   │
-                          │  (fake / onnx / rknn)│
+                          │  (fake / onnx / rknn / tensorrt)│
                           └──────────┬───────────┘
                                      │
                ┌─────────────────────┼─────────────────────┐
                │                     │                     │
    ┌───────────▼──────┐  ┌──────────▼──────┐  ┌──────────▼──────┐
-   │  ONNX Runtime    │  │  QDQ INT8       │  │  RKNN Toolkit2  │
-   │  (CPU)           │  │  (experimental)  │  │  (WSL, rk3588)  │
+   │  ONNX Runtime    │  │  QDQ INT8       │  │  TensorRT       │  │  RKNN Toolkit2  │
+   │  (CPU)           │  │  (experimental)  │  │  (GPU, NVIDIA)   │  │  (WSL, rk3588)  │
    └──────────────────┘  └─────────────────┘  └─────────────────┘
 ```
 
@@ -117,9 +117,7 @@ ZMQ/HTTP inference serving, benchmark, RKNN conversion, deployment reporting, an
 ```powershell
 python -m pytest tests -q
 ```
-→ **Dual-mode:**
-  - Clean checkout / no generated artifacts: **111 passed, 10 skipped**
-  - Full local smoke test / with ONNX FP32 + QDQ INT8 artifacts: **121 passed, 0 skipped**
+→ **Latest: 164 passed, 10 skipped** (10 skipped are artifact-dependent smoke tests)
 
 **HTTP ONNX inference:**
 - `/health` ok
@@ -157,4 +155,4 @@ python -m pytest tests -q
 
 ## Next
 
-Stage 6 → RK3588 board validation (when hardware is available)
+Future optional work → RK3588 board-side validation when hardware is available
