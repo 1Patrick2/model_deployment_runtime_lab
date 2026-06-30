@@ -1,0 +1,6 @@
+# Dynamic weight-only INT8 baseline for MobileNetV3-small
+
+input_model: outputs/onnx/mobilenetv3_small_imagenet_fp32.onnx
+output_model: outputs/onnx/mobilenetv3_small_imagenet_int8_dynamic.onnx
+method: dynamic
+weight_type: qint8
