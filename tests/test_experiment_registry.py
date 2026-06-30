@@ -65,3 +65,18 @@ class TestDecisionRules:
             "fp32_mean_latency_ms": 4.0, "int8_mean_latency_ms": 3.0,
         })
         assert d == "recommended_candidate"
+
+    def test_quantization_failure_has_decision(self):
+        """Quantization failure must include decision: invalid_artifact."""
+        result = {
+            "experiment_id": "test",
+            "model_id": "test_model",
+            "method": "static_qdq_real",
+            "status": "failed",
+            "failure_stage": "quantization",
+            "error_type": "FileNotFoundError",
+            "error_message": "ONNX model not found",
+            "decision": "invalid_artifact",
+        }
+        assert result["decision"] == "invalid_artifact"
+        assert result["status"] == "failed"

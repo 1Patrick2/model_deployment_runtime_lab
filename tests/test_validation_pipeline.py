@@ -1,3 +1,104 @@
+"""Consolidated tests -- merged from test_image_preprocess.py, test_classification_postprocess.py, test_output_consistency_metrics.py."""
+
+# -- From test_image_preprocess.py --
+"""Tests for image preprocessing."""
+
+import numpy as np
+import pytest
+
+from src.runtime.image_preprocess import preprocess_image
+
+
+class TestPreprocessImage:
+    """Image preprocessing with a generated test image."""
+
+    def test_preprocess_returns_correct_shape(self, tmp_path):
+        # Create a small test image
+        img_path = tmp_path / "test.png"
+        from PIL import Image
+        img = Image.new("RGB", (224, 224), color=(128, 128, 128))
+        img.save(img_path)
+
+        tensor = preprocess_image(str(img_path), target_size=(224, 224))
+        assert tensor.shape == (1, 3, 224, 224)
+        assert tensor.dtype == np.float32
+
+    def test_preprocess_accepts_jpg(self, tmp_path):
+        img_path = tmp_path / "test.jpg"
+        from PIL import Image
+        img = Image.new("RGB", (300, 200), color=(64, 128, 192))
+        img.save(img_path)
+
+        tensor = preprocess_image(str(img_path), target_size=(224, 224))
+        assert tensor.shape == (1, 3, 224, 224)
+
+    def test_preprocess_normalization_range(self, tmp_path):
+        img_path = tmp_path / "grey.png"
+        from PIL import Image
+        img = Image.new("RGB", (224, 224), color=(0, 0, 0))  # black
+        img.save(img_path)
+
+        tensor = preprocess_image(str(img_path), target_size=(224, 224))
+        # Black pixels after normalisation should be negative (below mean)
+        assert np.all(tensor < 0)
+
+    def test_missing_file_raises_error(self):
+        with pytest.raises((FileNotFoundError, RuntimeError)):
+            preprocess_image("nonexistent.jpg", target_size=(224, 224))
+# -- From test_classification_postprocess.py --
+"""Tests for classification top-k post-processing."""
+
+import numpy as np
+
+from src.runtime.classification_postprocess import (
+    postprocess_top_k,
+    softmax,
+    top_k_to_dicts,
+)
+from src.models.imagenet_labels import label_for_class_id
+
+
+class TestSoftmax:
+    def test_softmax_sums_to_one(self):
+        logits = np.array([2.0, 1.0, 0.1], dtype=np.float32)
+        probs = softmax(logits)
+        assert abs(probs.sum() - 1.0) < 1e-5
+
+    def test_softmax_is_stable_large_values(self):
+        logits = np.array([1000, 1010, 990], dtype=np.float32)
+        probs = softmax(logits)
+        assert abs(probs.sum() - 1.0) < 1e-5
+
+
+class TestPostprocessTopK:
+    def test_returns_correct_number(self):
+        logits = np.random.randn(1, 1000).astype(np.float32)
+        predictions = postprocess_top_k([logits], k=5)
+        assert len(predictions) == 5
+
+    def test_scores_are_between_0_and_1(self):
+        logits = np.random.randn(1, 1000).astype(np.float32)
+        predictions = postprocess_top_k([logits], k=3)
+        for p in predictions:
+            assert 0.0 <= p.score <= 1.0
+
+    def test_top_prediction_has_highest_score(self):
+        logits = np.zeros((1, 1000), dtype=np.float32)
+        logits[0, 42] = 10.0  # class 42 is dominant
+        predictions = postprocess_top_k([logits], k=3)
+        assert predictions[0].class_id == 42
+        assert predictions[0].score > predictions[1].score
+
+
+class TestLabelForClassId:
+    def test_known_class_returns_name(self):
+        name = label_for_class_id(281)
+        assert name == "tiger cat"
+
+    def test_unknown_class_returns_fallback(self):
+        name = label_for_class_id(9999)
+        assert "class_" in name
+# -- From test_output_consistency_metrics.py --
 """Tests for output consistency metrics."""
 
 import numpy as np

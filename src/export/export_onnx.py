@@ -11,7 +11,7 @@ Usage
     python -m src.export.export_onnx --model mobilenet_v3_small --pretrained
 
     # Config-driven mode
-    python -m src.export.export_onnx --config configs/export_mobilenetv3_small_imagenet.yaml
+    python -m src.export.export_onnx --config configs/export/mobilenetv3_small_imagenet.yaml
 """
 
 from __future__ import annotations
