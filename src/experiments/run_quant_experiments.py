@@ -298,6 +298,7 @@ def main() -> None:
             result["experiment_id"] = exp["id"]
             result["model_id"] = exp["model"]
             result["method"] = exp.get("method", "")
+            result["decision"] = _decide(exp["id"], result)
         else:
             result = run_experiment(exp, models, datasets)
         results.append(result)
