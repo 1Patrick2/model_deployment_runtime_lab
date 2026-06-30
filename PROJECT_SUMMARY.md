@@ -36,36 +36,17 @@ ZMQ/HTTP inference serving, benchmark, RKNN conversion, deployment reporting, an
 ## Architecture
 
 ```
-                          ┌──────────────────────┐
-                          │   Model Zoo / Export  │
-                          │  (torchvision → ONNX) │
-                          └──────────┬───────────┘
-                                     │
-                          ┌──────────▼───────────┐
-                          │   Model Registry     │
-                          │  (manifest + lookup) │
-                          └──────────┬───────────┘
-                                     │
-               ┌─────────────────────┼─────────────────────┐
-               │                     │                     │
-   ┌───────────▼──────┐  ┌──────────▼──────┐  ┌──────────▼──────┐
-   │  Benchmark       │  │  ZMQ Server     │  │  HTTP Server    │
-   │  (latency/report) │  │  (REQ/REP)      │  │  (FastAPI)      │
-   └──────────────────┘  └─────────────────┘  └─────────────────┘
-               │                     │                     │
-               └─────────────────────┼─────────────────────┘
-                                     │
-                          ┌──────────▼───────────┐
-                          │   Runtime Backends   │
-                          │  (fake / onnx / rknn / tensorrt)│
-                          └──────────┬───────────┘
-                                     │
-               ┌─────────────────────┼─────────────────────┐
-               │                     │                     │
-   ┌───────────▼──────┐  ┌──────────▼──────┐  ┌──────────▼──────┐
-   │  ONNX Runtime    │  │  QDQ INT8       │  │  TensorRT       │  │  RKNN Toolkit2  │
-   │  (CPU)           │  │  (experimental)  │  │  (GPU, NVIDIA)   │  │  (WSL, rk3588)  │
-   └──────────────────┘  └─────────────────┘  └─────────────────┘
+Model Zoo / Export (torchvision → ONNX)
+  → Model Registry (manifest + lookup)
+     ├→ Benchmark (latency / report)
+     ├→ ZMQ Server (REQ/REP)
+     └→ HTTP Server (FastAPI)
+          → Runtime Backends:
+             ├─ fake runner
+             ├─ ONNX Runtime CPU
+             ├─ QDQ INT8 (quantized ONNX)
+             ├─ TensorRT GPU
+             └─ RKNN Toolkit2 (WSL, rk3588)
 ```
 
 ---
