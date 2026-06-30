@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-import json
+import re
 import shutil
 import subprocess
 from typing import Any, Dict
@@ -14,15 +14,22 @@ def find_trtexec() -> str | None:
 
 
 def get_trtexec_version() -> str | None:
-    """Return ``trtexec`` version string, or ``None`` if not available."""
+    """Return a short ``trtexec`` version string, or ``None``.
+
+    Parses the first line of ``trtexec --help`` to extract the
+    TensorRT version instead of dumping the full help text.
+    """
     exe = find_trtexec()
     if exe is None:
         return None
     try:
         result = subprocess.run(
-            [exe, "--version"], capture_output=True, text=True, timeout=10
+            [exe, "--help"], capture_output=True, text=True, timeout=10
         )
-        return result.stdout.strip() or result.stderr.strip() or None
+        first_line = (result.stdout or result.stderr or "").strip().split("\n")[0]
+        # Expected: "TensorRT v110100 b106" or similar
+        match = re.search(r"TensorRT\s+v?[\d.]+\w*", first_line, re.IGNORECASE)
+        return match.group(0) if match else first_line[:80] or None
     except Exception:
         return None
 

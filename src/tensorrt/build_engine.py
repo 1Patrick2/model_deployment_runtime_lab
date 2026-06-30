@@ -28,7 +28,7 @@ def _build_command(config: dict) -> List[str]:
     """Construct the trtexec build command."""
     onnx = Path(config["onnx_model"])
     engine = Path(config["engine_output"])
-    precision = config.get("precision", "fp16")
+    precision = config.get("precision", "default")
     inp = config.get("input_name", "input")
     shape = config.get("input_shape", [1, 3, 224, 224])
     shape_str = f"{inp}:{'x'.join(str(d) for d in shape)}"
@@ -38,9 +38,12 @@ def _build_command(config: dict) -> List[str]:
         "trtexec",
         f"--onnx={onnx}",
         f"--saveEngine={engine}",
-        f"--{precision}",
         f"--shapes={shape_str}",
     ]
+    # Precision: only add flag if explicitly fp16
+    if precision == "fp16":
+        cmd.append("--fp16")
+    # "default" precision: no flag added
     workspace = trt.get("workspace_mb")
     if workspace:
         cmd.append(f"--memPoolSize=workspace:{workspace}")
@@ -68,6 +71,7 @@ def run_build(config: dict, dry_run: bool = False) -> dict:
 
     Returns a structured report dict.
     """
+    precision = config.get("precision", "default")
     onnx_path = Path(config["onnx_model"])
     if not onnx_path.exists() and not dry_run:
         return {
@@ -93,7 +97,8 @@ def run_build(config: dict, dry_run: bool = False) -> dict:
     report: Dict[str, Any] = {
         "model_id": config.get("model_id", ""),
         "backend": "tensorrt",
-        "precision": config.get("precision", "fp16"),
+        "precision_requested": precision,
+        "precision_effective": precision,
         "onnx_model": str(onnx_path),
         "engine_output": config.get("engine_output", ""),
         "env": env,
@@ -167,7 +172,8 @@ def run_benchmark(config: dict, dry_run: bool = False) -> dict:
     report: Dict[str, Any] = {
         "model_id": config.get("model_id", ""),
         "backend": "tensorrt",
-        "precision": config.get("precision", "fp16"),
+        "precision_requested": precision,
+        "precision_effective": precision,
         "benchmark_command": cmd,
     }
 
