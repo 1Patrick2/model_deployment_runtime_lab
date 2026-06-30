@@ -107,7 +107,7 @@ class TestTensorRTReport:
                   "reason": "trtexec not available"}
         p = write_tensorrt_markdown(report, tmp_path / "report.md")
         content = p.read_text(encoding="utf-8")
-        assert "TensorRT FP16 Benchmark Report" in content
+        assert "TensorRT Benchmark Report" in content
 
     def test_build_command_with_workspace(self):
         cfg = {

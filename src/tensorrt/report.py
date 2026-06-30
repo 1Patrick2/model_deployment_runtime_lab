@@ -23,7 +23,7 @@ def write_tensorrt_markdown(report: Dict[str, Any], path: str | Path) -> Path:
     p.parent.mkdir(parents=True, exist_ok=True)
 
     lines = [
-        "# TensorRT FP16 Benchmark Report",
+        "# TensorRT Benchmark Report",
         "",
         "## Environment",
         "",
@@ -42,7 +42,8 @@ def write_tensorrt_markdown(report: Dict[str, Any], path: str | Path) -> Path:
         "| Field | Value |",
         "|---|---|",
         f"| model_id | {_safe(report.get('model_id'))} |",
-        f"| precision | {_safe(report.get('precision'))} |",
+        f"| precision_requested | {_safe(report.get('precision_requested', report.get('precision')))} |",
+        f"| precision_effective | {_safe(report.get('precision_effective', report.get('precision')))} |",
         f"| build_status | {_safe(report.get('build_status'))} |",
         f"| engine_size_mb | {_safe(report.get('engine_size_mb'))} |",
     ]
@@ -51,6 +52,8 @@ def write_tensorrt_markdown(report: Dict[str, Any], path: str | Path) -> Path:
     if build_cmd:
         lines += ["", "### Build Command", "", "```", _safe(" ".join(build_cmd)), "```"]
 
+    if report.get("precision_warning"):
+        lines += ["", f"**Precision Warning:** {_safe(report['precision_warning'])}"]
     if report.get("build_error"):
         lines += ["", f"**Build Error:** {_safe(report['build_error'])}"]
 

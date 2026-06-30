@@ -138,12 +138,15 @@ def run_benchmark(config: dict, dry_run: bool = False) -> dict:
 
     Returns a structured report dict with metrics.
     """
+    precision = config.get("precision", "default")
+
     if dry_run:
         cmd = _benchmark_command(config)
         return {
             "model_id": config.get("model_id", ""),
             "backend": "tensorrt",
-            "precision": config.get("precision", "fp16"),
+            "precision_requested": precision,
+            "precision_effective": precision,
             "benchmark_status": "dry_run",
             "benchmark_command": cmd,
             "benchmark_output": " ".join(cmd),
